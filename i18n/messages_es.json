@@ -1,0 +1,22 @@
+{
+	"pathCalculus" : "Cálculo",
+	"pathIntegral" : "Cálculo.Integral",
+
+	"mnemonicIntegral" : "∫",
+
+	"nameIndefiniteIntegral" : "Integral indefinida",
+	"leafIndefiniteIntegral" : "Integral indefinida",
+	"childrenIndefiniteIntegral" : [ "Integrando", "Variable" ],
+
+	"nameDefiniteIntegral" : "Integral definida",
+	"leafDefiniteIntegral" : "Integral definida",
+	"childrenDefiniteIntegral" : [ "Integrando", "Variable", "Límite inferior", "Límite superior" ],
+
+	"nameDefiniteIntegralOverDomain" : "Integral definida sobre dominio",
+	"leafDefiniteIntegralOverDomain" : "Integral definida sobre dominio",
+	"childrenDefiniteIntegralOverDomain" : [ "Integrando", "Dominio", "Elemento diferencial" ],
+
+	"editionDIODTitle"              : "Integral sobre dominio",
+	"editionDIODDimensions"         : "Número de signos integrales",
+	"editionDIODInvalidDimensions"  : "El número de signos integrales debe ser un entero positivo"
+}

@@ -1,0 +1,22 @@
+{
+	"pathCalculus" : "Calculus",
+	"pathIntegral" : "Calculus.Integral",
+
+	"mnemonicIntegral" : "∫",
+
+	"nameIndefiniteIntegral" : "Indefinite integral",
+	"leafIndefiniteIntegral" : "Indefinite integral",
+	"childrenIndefiniteIntegral" : [ "Integrand", "Variable" ],
+
+	"nameDefiniteIntegral" : "Definite integral",
+	"leafDefiniteIntegral" : "Definite integral",
+	"childrenDefiniteIntegral" : [ "Integrand", "Variable", "Lower bound", "Upper bound" ],
+
+	"nameDefiniteIntegralOverDomain" : "Definite integral over domain",
+	"leafDefiniteIntegralOverDomain" : "Definite integral over domain",
+	"childrenDefiniteIntegralOverDomain" : [ "Integrand", "Domain", "Differential element" ],
+
+	"editionDIODTitle"              : "Integral over domain",
+	"editionDIODDimensions"         : "Number of integral signs",
+	"editionDIODInvalidDimensions"  : "Number of integral signs must be a positive integer"
+}
