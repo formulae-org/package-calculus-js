@@ -16,7 +16,10 @@
 	"leafDefiniteIntegralOverDomain" : "Integral definida sobre dominio",
 	"childrenDefiniteIntegralOverDomain" : [ "Integrando", "Dominio", "Elemento diferencial" ],
 
+	"actionEditDIOD"                : "Editar integral",
+
 	"editionDIODTitle"              : "Integral sobre dominio",
 	"editionDIODDimensions"         : "Número de signos integrales",
+	"editionDIODClosedDomain"       : "Dominio cerrado",
 	"editionDIODInvalidDimensions"  : "El número de signos integrales debe ser un entero positivo"
 }

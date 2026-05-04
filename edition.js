@@ -20,21 +20,29 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 export class CalculusPackage extends Formulae.EditionPackage {};
 
-CalculusPackage.editionCreateDefiniteIntegralOverDomain = function() {
+// The form is created once on first use. Both editionCreateDefiniteIntegralOverDomain
+// and actionEditDefiniteIntegralOverDomain share it, each re-assigning ok.onclick.
+CalculusPackage.ensureDIODForm = function() {
 	if (CalculusPackage.createDIODForm === undefined) {
 		let table = document.createElement("table");
 		table.classList.add("bordered");
 		table.innerHTML = `
 <tr><th colspan=2>${CalculusPackage.messages.editionDIODTitle}
 <tr><td>${CalculusPackage.messages.editionDIODDimensions}<td><input type="number" value="2" min="1" max="9">
+<tr><td>${CalculusPackage.messages.editionDIODClosedDomain}<td><input type="checkbox">
 <tr><th colspan=2><button>Ok</button>
 `;
 		CalculusPackage.createDIODForm = table;
 	}
+};
+
+CalculusPackage.editionCreateDefiniteIntegralOverDomain = function() {
+	CalculusPackage.ensureDIODForm();
 
 	let tableRows = CalculusPackage.createDIODForm.rows;
-	let dims = tableRows[1].cells[1].firstChild;
-	let ok   = tableRows[2].cells[0].firstChild;
+	let dims   = tableRows[1].cells[1].firstChild;
+	let closed = tableRows[2].cells[1].firstChild;
+	let ok     = tableRows[3].cells[0].firstChild;
 
 	ok.onclick = () => {
 		let D = parseInt(dims.value);
@@ -46,11 +54,43 @@ CalculusPackage.editionCreateDefiniteIntegralOverDomain = function() {
 		Formulae.resetModal();
 
 		let newExpr = Formulae.createExpression("Calculus.Integral.DefiniteIntegralOverDomain");
-		newExpr.dimensions = D;
+		newExpr.dimensions   = D;
+		newExpr.closedDomain = closed.checked;
 		Formulae.sExpression.replaceBy(newExpr);
 		newExpr.addChild(Formulae.sExpression);   // integrand: current selection
 		newExpr.addChild(new Expression.Null());  // domain
 		newExpr.addChild(new Expression.Null());  // differential element
+
+		Formulae.sHandler.prepareDisplay();
+		Formulae.sHandler.display();
+		Formulae.setSelected(Formulae.sHandler, Formulae.sExpression, false);
+	};
+
+	Formulae.setModal(CalculusPackage.createDIODForm);
+};
+
+CalculusPackage.actionEditDefiniteIntegralOverDomain = function() {
+	CalculusPackage.ensureDIODForm();
+
+	let tableRows = CalculusPackage.createDIODForm.rows;
+	let dims   = tableRows[1].cells[1].firstChild;
+	let closed = tableRows[2].cells[1].firstChild;
+	let ok     = tableRows[3].cells[0].firstChild;
+
+	dims.value     = Formulae.sExpression.dimensions   || 1;
+	closed.checked = Formulae.sExpression.closedDomain || false;
+
+	ok.onclick = () => {
+		let D = parseInt(dims.value);
+		if (isNaN(D) || D < 1) {
+			alert(CalculusPackage.messages.editionDIODInvalidDimensions);
+			return;
+		}
+
+		Formulae.resetModal();
+
+		Formulae.sExpression.dimensions   = D;
+		Formulae.sExpression.closedDomain = closed.checked;
 
 		Formulae.sHandler.prepareDisplay();
 		Formulae.sHandler.display();
@@ -75,4 +115,10 @@ CalculusPackage.setEditions = function() {
 	);
 };
 
-CalculusPackage.setActions = function() {};
+CalculusPackage.setActions = function() {
+	Formulae.addAction("Calculus.Integral.DefiniteIntegralOverDomain", {
+		isAvailableNow: () => true,
+		getDescription: () => CalculusPackage.messages.actionEditDIOD,
+		doAction: () => CalculusPackage.actionEditDefiniteIntegralOverDomain()
+	});
+};

@@ -20,10 +20,17 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 export class CalculusPackage extends Formulae.ExpressionPackage {};
 
-const SIGN_GAP  = 0;  // px between ∫ sign right edge and integrand
-const D_GAP     = 5;  // px between integrand and differential d
-const LIMIT_GAP = 2;  // px between ∫ sign top/bottom and limits
+const SIGN_GAP_FRAC               = 0.00;  // gap right of ∫ sign, as fraction of widthSymbol
+const SIGN_GAP_FRAC_CLOSED_DOMAIN = 0.30;  // wider gap for closed-domain; the oval protrudes right of the sign column
+const D_GAP_FRAC                  = 0.30;  // gap between integrand and differential d, as fraction of widthSymbol
+const LIMIT_GAP_FRAC              = 0.08;  // gap between ∫ sign and limit expressions, as fraction of widthSymbol
+
 const LIMIT_SIZE = -4; // font-size delta for limit subexpressions
+
+const CIRCLE_CX_FRAC       = 0.45;   // oval center as fraction of widthSymbol from sign left edge
+const CIRCLE_RADIUS_SINGLE = 0.30;   // r for dims=1, as fraction of widthSymbol
+const CIRCLE_RADIUS_MULTI  = 0.35;   // r for dims≥2, as fraction of widthSymbol
+const CIRCLE_STROKE_WIDTH  = 0.06;   // oval lineWidth as fraction of widthSymbol
 
 // Path data from Wikipedia's integral SVG.
 // Original viewBox: 0 0 52 75; <g> transform: translate(0,75) scale(0.1,-0.1)
@@ -56,6 +63,23 @@ function drawIntegralSign(context, x, y, w, h) {
 	context.restore();
 }
 
+// Draws a stadium (two semicircles joined by horizontal tangents) centered
+// vertically at cy. For dims=1 the two centers coincide and it degenerates
+// to a full circle. strokeStyle is set to match the current fillStyle so
+// the oval color tracks selection highlights and theme changes.
+function drawClosedIntegralOval(context, cx1, cy, cx2, r, lineWidth) {
+	context.save();
+	context.lineWidth   = lineWidth;
+	context.strokeStyle = context.fillStyle;
+	context.beginPath();
+	context.arc(cx1, cy, r,  Math.PI / 2, -Math.PI / 2, false); // left semicircle
+	context.lineTo(cx2, cy - r);                                  // top tangent
+	context.arc(cx2, cy, r, -Math.PI / 2,  Math.PI / 2, false); // right semicircle
+	context.closePath();                                           // bottom tangent
+	context.stroke();
+	context.restore();
+}
+
 // ─── Indefinite integral: ∫ f dx ────────────────────────────────────────────
 
 const IndefiniteIntegral = class extends Expression.Function {
@@ -68,6 +92,8 @@ const IndefiniteIntegral = class extends Expression.Function {
 	prepareDisplay(context) {
 		this.heightSymbol = Math.floor(context.fontInfo.size * 3);
 		this.widthSymbol  = Math.round(this.heightSymbol * SIGN_SVG_W / SIGN_SVG_H);
+		let signGap = Math.round(this.widthSymbol * SIGN_GAP_FRAC);
+		let dGap    = Math.round(this.widthSymbol * D_GAP_FRAC);
 
 		let ch0 = this.children[0]; // integrand
 		let ch1 = this.children[1]; // variable
@@ -88,11 +114,11 @@ const IndefiniteIntegral = class extends Expression.Function {
 			ch1.height - ch1.horzBaseline
 		);
 
-		// Horizontal: [∫] [SIGN_GAP] [integrand] [D_GAP] [d] [variable]
-		ch0.x = this.widthSymbol + SIGN_GAP;
+		// Horizontal: [∫] [signGap] [integrand] [dGap] [d] [variable]
+		ch0.x = this.widthSymbol + signGap;
 		ch0.y = this.horzBaseline - ch0.horzBaseline;
 
-		this.dX = ch0.x + ch0.width + D_GAP;
+		this.dX = ch0.x + ch0.width + dGap;
 
 		ch1.x = this.dX + this.dWidth;
 		ch1.y = this.horzBaseline - ch1.horzBaseline;
@@ -122,16 +148,16 @@ const IndefiniteIntegral = class extends Expression.Function {
 		ch1.display(context, x + ch1.x, y + ch1.y);
 	}
 
-	moveTo(direction) {
-		return direction === Expression.NEXT
-			? this.children[1].moveTo(direction)
-			: this.children[0].moveTo(direction);
-	}
-
 	moveAcross(i, direction) {
 		if (direction === Expression.NEXT     && i === 0) return this.children[1].moveTo(direction);
 		if (direction === Expression.PREVIOUS && i === 1) return this.children[0].moveTo(direction);
 		return this.moveOut(direction);
+	}
+	
+	moveTo(direction) {
+		return direction === Expression.PREVIOUS
+			? this.children[1].moveTo(direction)
+			: this.children[0].moveTo(direction);
 	}
 };
 
@@ -147,6 +173,9 @@ const DefiniteIntegral = class extends Expression.Function {
 	prepareDisplay(context) {
 		this.heightSymbol = Math.floor(context.fontInfo.size * 3);
 		this.widthSymbol  = Math.round(this.heightSymbol * SIGN_SVG_W / SIGN_SVG_H);
+		let signGap  = Math.round(this.widthSymbol * SIGN_GAP_FRAC);
+		let dGap     = Math.round(this.widthSymbol * D_GAP_FRAC);
+		let limitGap = Math.round(this.widthSymbol * LIMIT_GAP_FRAC);
 
 		let ch0 = this.children[0]; // integrand
 		let ch1 = this.children[1]; // variable
@@ -170,8 +199,8 @@ const DefiniteIntegral = class extends Expression.Function {
 		this.widthSignColumn = Math.max(this.widthSymbol, ch2.width, ch3.width);
 		this.symbolX = Math.floor((this.widthSignColumn - this.widthSymbol) / 2);
 
-		let spaceTop    = ch3.height + LIMIT_GAP;
-		let spaceBottom = ch2.height + LIMIT_GAP;
+		let spaceTop    = ch3.height + limitGap;
+		let spaceBottom = ch2.height + limitGap;
 
 		// Vertical: sign center at horzBaseline; must leave room for upper bound above
 		this.horzBaseline = Math.max(
@@ -183,16 +212,16 @@ const DefiniteIntegral = class extends Expression.Function {
 
 		// Limits centered within sign column, tight against sign top/bottom
 		ch3.x = Math.floor((this.widthSignColumn - ch3.width) / 2);
-		ch3.y = this.symbolY - LIMIT_GAP - ch3.height;
+		ch3.y = this.symbolY - limitGap - ch3.height;
 
 		ch2.x = Math.floor((this.widthSignColumn - ch2.width) / 2);
-		ch2.y = this.symbolY + this.heightSymbol + LIMIT_GAP;
+		ch2.y = this.symbolY + this.heightSymbol + limitGap;
 
 		// Integrand and variable to the right of the sign column
-		ch0.x = this.widthSignColumn + SIGN_GAP;
+		ch0.x = this.widthSignColumn + signGap;
 		ch0.y = this.horzBaseline - ch0.horzBaseline;
 
-		this.dX = ch0.x + ch0.width + D_GAP;
+		this.dX = ch0.x + ch0.width + dGap;
 
 		ch1.x = this.dX + this.dWidth;
 		ch1.y = this.horzBaseline - ch1.horzBaseline;
@@ -238,38 +267,44 @@ const DefiniteIntegral = class extends Expression.Function {
 		context.fontInfo.setSizeAbsolute(context, bkpSize);
 	}
 
-	moveTo(direction) {
-		switch (direction) {
-			case Expression.UP:   return this.children[3].moveTo(direction);
-			case Expression.DOWN: return this.children[2].moveTo(direction);
-			case Expression.NEXT: return this.children[1].moveTo(direction);
-			default:              return this.children[0].moveTo(direction);
-		}
-	}
-
 	moveAcross(i, direction) {
 		switch (direction) {
 			case Expression.NEXT:
 				if (i === 0) return this.children[1].moveTo(direction);
+				if (i === 2 || i === 3) return this.children[0].moveTo(direction);
 				break;
+			
 			case Expression.PREVIOUS:
 				if (i === 1) return this.children[0].moveTo(direction);
 				break;
+			
 			case Expression.UP:
-				if (i !== 3) return this.children[3].moveTo(direction);
+				if (i === 0 || i === 1) return this.children[3].moveTo(direction);
+				if (i === 2)            return this.children[0].moveTo(direction);
 				break;
+			
 			case Expression.DOWN:
-				if (i === 3)             return this.children[0].moveTo(direction);
-				if (i === 0 || i === 1)  return this.children[2].moveTo(direction);
+				if (i === 0 || i === 1) return this.children[2].moveTo(direction);
+				if (i === 3)            return this.children[0].moveTo(direction);
 				break;
 		}
+		
 		return this.moveOut(direction);
+	}
+	
+	moveTo(direction) {
+		switch (direction) {
+			case Expression.UP:       return this.children[2].moveTo(direction);
+			case Expression.DOWN:     return this.children[3].moveTo(direction);
+			case Expression.PREVIOUS: return this.children[1].moveTo(direction);
+			default:                  return this.children[0].moveTo(direction);
+		}
 	}
 };
 
 // ─── Definite integral over domain: ∫∫_D f dA ──────────────────────────────
 
-const MULTI_SIGN_STEP = 0.80; // step between consecutive ∫ signs as a fraction of widthSymbol
+const MULTI_SIGN_STEP = 0.80; // < 1.0 so consecutive ∫ signs overlap slightly, giving the stacked-integral look
 
 const DefiniteIntegralOverDomain = class extends Expression.Function {
 	getTag()                { return "Calculus.Integral.DefiniteIntegralOverDomain"; }
@@ -278,9 +313,9 @@ const DefiniteIntegralOverDomain = class extends Expression.Function {
 	canHaveChildren(count)  { return count === 3; }
 	getChildName(index)     { return CalculusPackage.messages.childrenDefiniteIntegralOverDomain[index]; }
 
-	getSerializationNames() { return [ "Dimensions" ]; }
-	async getSerializationStrings() { return [ String(this.dimensions) ]; }
-	setSerializationStrings(strings, promises) { this.dimensions = parseInt(strings[0]); }
+	getSerializationNames() { return [ "Dimensions", "ClosedDomain" ]; }
+	async getSerializationStrings() { return [ String(this.dimensions), this.closedDomain ? "True" : "False" ]; }
+	setSerializationStrings(strings, promises) { this.dimensions = parseInt(strings[0]); this.closedDomain = strings[1] === "True"; }
 
 	prepareDisplay(context) {
 		let dims = this.dimensions || 1;
@@ -289,6 +324,9 @@ const DefiniteIntegralOverDomain = class extends Expression.Function {
 		this.widthSymbol   = Math.round(this.heightSymbol * SIGN_SVG_W / SIGN_SVG_H);
 		this.signStep      = Math.round(this.widthSymbol * MULTI_SIGN_STEP);
 		this.signGroupWidth = this.widthSymbol + (dims - 1) * this.signStep;
+		let signGap  = Math.round(this.widthSymbol * (this.closedDomain ? SIGN_GAP_FRAC_CLOSED_DOMAIN : SIGN_GAP_FRAC));
+		let dGap     = Math.round(this.widthSymbol * D_GAP_FRAC);
+		let limitGap = Math.round(this.widthSymbol * LIMIT_GAP_FRAC);
 
 		let ch0 = this.children[0]; // integrand
 		let ch1 = this.children[1]; // domain
@@ -310,7 +348,7 @@ const DefiniteIntegralOverDomain = class extends Expression.Function {
 		this.widthSignColumn = Math.max(this.signGroupWidth, ch1.width);
 		this.symbolGroupX    = Math.floor((this.widthSignColumn - this.signGroupWidth) / 2);
 
-		let spaceBottom = ch1.height + LIMIT_GAP;
+		let spaceBottom = ch1.height + limitGap;
 
 		this.horzBaseline = Math.max(
 			Math.floor(this.heightSymbol / 2),
@@ -320,12 +358,12 @@ const DefiniteIntegralOverDomain = class extends Expression.Function {
 		this.symbolY = this.horzBaseline - Math.floor(this.heightSymbol / 2);
 
 		ch1.x = Math.floor((this.widthSignColumn - ch1.width) / 2);
-		ch1.y = this.symbolY + this.heightSymbol + LIMIT_GAP;
+		ch1.y = this.symbolY + this.heightSymbol + limitGap;
 
-		ch0.x = this.widthSignColumn + SIGN_GAP;
+		ch0.x = this.widthSignColumn + signGap;
 		ch0.y = this.horzBaseline - ch0.horzBaseline;
 
-		this.dX = ch0.x + ch0.width + D_GAP;
+		this.dX = ch0.x + ch0.width + dGap;
 
 		ch2.x = this.dX + this.dWidth;
 		ch2.y = this.horzBaseline - ch2.horzBaseline;
@@ -351,6 +389,20 @@ const DefiniteIntegralOverDomain = class extends Expression.Function {
 			);
 		}
 
+		if (this.closedDomain) {
+			let rFrac = dims === 1 ? CIRCLE_RADIUS_SINGLE : CIRCLE_RADIUS_MULTI;
+			let r     = Math.round(this.widthSymbol * rFrac);
+			let cxOff = Math.round(this.widthSymbol * CIRCLE_CX_FRAC);
+			drawClosedIntegralOval(
+				context,
+				x + this.symbolGroupX + cxOff,
+				y + this.horzBaseline,
+				x + this.symbolGroupX + (dims - 1) * this.signStep + cxOff,
+				r,
+				Math.max(1, Math.round(this.widthSymbol * CIRCLE_STROKE_WIDTH))
+			);
+		}
+
 		let bkpSize = context.fontInfo.size;
 		context.fontInfo.setSizeRelative(context, LIMIT_SIZE);
 		let ch1 = this.children[1];
@@ -369,30 +421,35 @@ const DefiniteIntegralOverDomain = class extends Expression.Function {
 		ch2.display(context, x + ch2.x, y + ch2.y);
 	}
 
-	moveTo(direction) {
-		switch (direction) {
-			case Expression.DOWN: return this.children[1].moveTo(direction);
-			case Expression.NEXT: return this.children[2].moveTo(direction);
-			default:              return this.children[0].moveTo(direction);
-		}
-	}
-
 	moveAcross(i, direction) {
 		switch (direction) {
 			case Expression.NEXT:
 				if (i === 0) return this.children[2].moveTo(direction);
+				if (i === 1) return this.children[0].moveTo(direction);
 				break;
+			
 			case Expression.PREVIOUS:
 				if (i === 2) return this.children[0].moveTo(direction);
 				break;
+			
 			case Expression.DOWN:
 				if (i === 0 || i === 2) return this.children[1].moveTo(direction);
 				break;
+			
 			case Expression.UP:
 				if (i === 1) return this.children[0].moveTo(direction);
 				break;
 		}
+		
 		return this.moveOut(direction);
+	}
+	
+	moveTo(direction) {
+		switch (direction) {
+			case Expression.UP:       return this.children[1].moveTo(direction);
+			case Expression.PREVIOUS: return this.children[2].moveTo(direction);
+			default:                  return this.children[0].moveTo(direction);
+		}
 	}
 };
 

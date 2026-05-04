@@ -16,7 +16,10 @@
 	"leafDefiniteIntegralOverDomain" : "Definite integral over domain",
 	"childrenDefiniteIntegralOverDomain" : [ "Integrand", "Domain", "Differential element" ],
 
+	"actionEditDIOD"                : "Edit integral",
+
 	"editionDIODTitle"              : "Integral over domain",
 	"editionDIODDimensions"         : "Number of integral signs",
+	"editionDIODClosedDomain"       : "Closed domain",
 	"editionDIODInvalidDimensions"  : "Number of integral signs must be a positive integer"
 }
