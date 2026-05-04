@@ -21,5 +21,25 @@
 	"editionDIODTitle"              : "Integral sobre dominio",
 	"editionDIODDimensions"         : "Número de signos integrales",
 	"editionDIODClosedDomain"       : "Dominio cerrado",
-	"editionDIODInvalidDimensions"  : "El número de signos integrales debe ser un entero positivo"
+	"editionDIODInvalidDimensions"  : "El número de signos integrales debe ser un entero positivo",
+
+	"pathLimit" : "Cálculo.Límite",
+
+	"mnemonicLimit"       : "lim",
+
+	"nameLimit"          : "Límite",
+	"leafLimit"          : "Límite",
+	"nameLimitInferior"  : "Límite inferior",
+	"leafLimitInferior"  : "Límite inferior",
+	"nameLimitSuperior"  : "Límite superior",
+	"leafLimitSuperior"  : "Límite superior",
+
+	"childrenLimit" : [ "Expresión", "Variable", "Punto límite" ],
+
+	"actionEditLimit"               : "Editar límite",
+	"editionLimitTitle"             : "Límite",
+	"editionLimitApproachDirection" : "Dirección de aproximación",
+	"editionLimitBoth"              : "Ambos lados",
+	"editionLimitLeft"              : "Por la izquierda (a⁻)",
+	"editionLimitRight"             : "Por la derecha (a⁺)"
 }

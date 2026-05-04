@@ -21,5 +21,25 @@
 	"editionDIODTitle"              : "Integral over domain",
 	"editionDIODDimensions"         : "Number of integral signs",
 	"editionDIODClosedDomain"       : "Closed domain",
-	"editionDIODInvalidDimensions"  : "Number of integral signs must be a positive integer"
+	"editionDIODInvalidDimensions"  : "Number of integral signs must be a positive integer",
+
+	"pathLimit" : "Calculus.Limit",
+
+	"mnemonicLimit"       : "lim",
+
+	"nameLimit"          : "Limit",
+	"leafLimit"          : "Limit",
+	"nameLimitInferior"  : "Limit inferior",
+	"leafLimitInferior"  : "Limit inferior",
+	"nameLimitSuperior"  : "Limit superior",
+	"leafLimitSuperior"  : "Limit superior",
+
+	"childrenLimit" : [ "Expression", "Variable", "Limit point" ],
+
+	"actionEditLimit"               : "Edit limit",
+	"editionLimitTitle"             : "Limit",
+	"editionLimitApproachDirection" : "Approach direction",
+	"editionLimitBoth"              : "Both sides",
+	"editionLimitLeft"              : "From left (a⁻)",
+	"editionLimitRight"             : "From right (a⁺)"
 }

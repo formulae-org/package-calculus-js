@@ -69,6 +69,43 @@ CalculusPackage.editionCreateDefiniteIntegralOverDomain = function() {
 	Formulae.setModal(CalculusPackage.createDIODForm);
 };
 
+// The form is created once on first use. All three limit action handlers share it,
+// each re-assigning ok.onclick.
+CalculusPackage.ensureLimitForm = function() {
+	if (CalculusPackage.limitForm !== undefined) return;
+	let table = document.createElement("table");
+	table.classList.add("bordered");
+	table.innerHTML = `
+<tr><th colspan=2>${CalculusPackage.messages.editionLimitTitle}
+<tr><td>${CalculusPackage.messages.editionLimitApproachDirection}<td><select>
+    <option value="Both">${CalculusPackage.messages.editionLimitBoth}</option>
+    <option value="Left">${CalculusPackage.messages.editionLimitLeft}</option>
+    <option value="Right">${CalculusPackage.messages.editionLimitRight}</option>
+</select>
+<tr><th colspan=2><button>Ok</button>
+`;
+	CalculusPackage.limitForm = table;
+};
+
+CalculusPackage.actionEditLimit = function() {
+	CalculusPackage.ensureLimitForm();
+	let tableRows = CalculusPackage.limitForm.rows;
+	let dir = tableRows[1].cells[1].firstChild;
+	let ok  = tableRows[2].cells[0].firstChild;
+
+	dir.value = Formulae.sExpression.approachDirection || "Both";
+
+	ok.onclick = () => {
+		Formulae.resetModal();
+		Formulae.sExpression.approachDirection = dir.value;
+		Formulae.sHandler.prepareDisplay();
+		Formulae.sHandler.display();
+		Formulae.setSelected(Formulae.sHandler, Formulae.sExpression, false);
+	};
+
+	Formulae.setModal(CalculusPackage.limitForm);
+};
+
 CalculusPackage.actionEditDefiniteIntegralOverDomain = function() {
 	CalculusPackage.ensureDIODForm();
 
@@ -113,6 +150,18 @@ CalculusPackage.setEditions = function() {
 		this.messages.pathIntegral, null, this.messages.leafDefiniteIntegralOverDomain,
 		() => CalculusPackage.editionCreateDefiniteIntegralOverDomain()
 	);
+	Formulae.addEdition(
+		this.messages.pathLimit, null, this.messages.leafLimit,
+		() => Expression.multipleEdition("Calculus.Limit.Limit", 3, 0)
+	);
+	Formulae.addEdition(
+		this.messages.pathLimit, null, this.messages.leafLimitInferior,
+		() => Expression.multipleEdition("Calculus.Limit.LimitInferior", 3, 0)
+	);
+	Formulae.addEdition(
+		this.messages.pathLimit, null, this.messages.leafLimitSuperior,
+		() => Expression.multipleEdition("Calculus.Limit.LimitSuperior", 3, 0)
+	);
 };
 
 CalculusPackage.setActions = function() {
@@ -121,4 +170,12 @@ CalculusPackage.setActions = function() {
 		getDescription: () => CalculusPackage.messages.actionEditDIOD,
 		doAction: () => CalculusPackage.actionEditDefiniteIntegralOverDomain()
 	});
+	let editLimitAction = {
+		isAvailableNow: () => true,
+		getDescription: () => CalculusPackage.messages.actionEditLimit,
+		doAction: () => CalculusPackage.actionEditLimit()
+	};
+	Formulae.addAction("Calculus.Limit.Limit",         editLimitAction);
+	Formulae.addAction("Calculus.Limit.LimitInferior", editLimitAction);
+	Formulae.addAction("Calculus.Limit.LimitSuperior", editLimitAction);
 };

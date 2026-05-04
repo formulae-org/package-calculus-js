@@ -453,9 +453,173 @@ const DefiniteIntegralOverDomain = class extends Expression.Function {
 	}
 };
 
+// ─── Limit: lim, lim inf, lim sup ───────────────────────────────────────────
+
+const WORD_GAP_FRAC = 0.10; // gap below word to subscript, as fraction of fontSize
+const EXPR_GAP_FRAC = 0.20; // gap right of sign column to expression, as fraction of fontSize
+
+const LimitBase = class extends Expression.Function {
+	getWord()              { return "lim"; }
+	getMnemonic()          { return CalculusPackage.messages.mnemonicLimit; }
+	canHaveChildren(count) { return count === 3; }
+	getChildName(index)    { return CalculusPackage.messages.childrenLimit[index]; }
+
+	getSerializationNames()         { return [ "ApproachDirection" ]; }
+	async getSerializationStrings() { return [ this.approachDirection || "Both" ]; }
+	setSerializationStrings(strings, promises) {
+		this.approachDirection = strings[0] || "Both";
+	}
+
+	prepareDisplay(context) {
+		let dir = this.approachDirection || "Both";
+		this.approachChar = dir === "Left" ? "⁻" : dir === "Right" ? "⁺" : "";
+
+		let ch0 = this.children[0]; // expression
+		let ch1 = this.children[1]; // variable
+		let ch2 = this.children[2]; // limit point
+
+		ch0.prepareDisplay(context);
+
+		let fontSize = context.fontInfo.size;
+		this.wordWidth = Math.ceil(context.measureText(this.getWord()).width);
+
+		let subArrowWidth, subApproachWidth, subBaseline;
+		{
+			let bkp = context.fontInfo.size;
+			context.fontInfo.setSizeRelative(context, LIMIT_SIZE);
+			ch1.prepareDisplay(context);
+			ch2.prepareDisplay(context);
+			subArrowWidth    = Math.ceil(context.measureText("→").width);
+			subApproachWidth = this.approachChar
+				? Math.ceil(context.measureText(this.approachChar).width) : 0;
+			subBaseline = Math.max(ch1.horzBaseline, ch2.horzBaseline);
+			context.fontInfo.setSizeAbsolute(context, bkp);
+		}
+
+		this.subArrowWidth = subArrowWidth;
+		this.subBaseline   = subBaseline;
+
+		let subWidth = ch1.width + subArrowWidth + ch2.width + subApproachWidth;
+
+		// Sign column: wide enough to hold both the word and the subscript
+		this.signColumnWidth = Math.max(this.wordWidth, subWidth);
+		this.wordX           = Math.floor((this.signColumnWidth - this.wordWidth) / 2);
+		let subLeft          = Math.floor((this.signColumnWidth - subWidth) / 2);
+
+		let wordGap = Math.round(fontSize * WORD_GAP_FRAC);
+		let exprGap = Math.round(fontSize * EXPR_GAP_FRAC);
+
+		// Vertical: word baseline at horzBaseline; subscript hangs below
+		this.horzBaseline = Math.max(Math.floor(fontSize / 2), ch0.horzBaseline);
+		this.subY         = this.horzBaseline + Math.ceil(fontSize / 2) + wordGap;
+
+		// Subscript children (baseline-aligned within subscript area)
+		ch1.x = subLeft;
+		ch1.y = this.subY + (subBaseline - ch1.horzBaseline);
+
+		this.arrowX = subLeft + ch1.width;
+
+		ch2.x = this.arrowX + subArrowWidth;
+		ch2.y = this.subY + (subBaseline - ch2.horzBaseline);
+
+		this.approachCharX = ch2.x + ch2.width;
+
+		// Expression to the right of the sign column
+		ch0.x = this.signColumnWidth + exprGap;
+		ch0.y = this.horzBaseline - ch0.horzBaseline;
+
+		let subHeight = subBaseline + Math.max(
+			ch1.height - ch1.horzBaseline,
+			ch2.height - ch2.horzBaseline
+		);
+		this.width        = ch0.x + ch0.width;
+		this.height       = Math.max(
+			this.subY + subHeight,
+			this.horzBaseline + (ch0.height - ch0.horzBaseline)
+		);
+		this.vertBaseline = Math.floor(this.width / 2);
+	}
+
+	display(context, x, y) {
+		super.drawText(context, this.getWord(),
+			x + this.wordX,
+			y + this.horzBaseline + Math.round(context.fontInfo.size / 2)
+		);
+
+		let bkpSize = context.fontInfo.size;
+		context.fontInfo.setSizeRelative(context, LIMIT_SIZE);
+
+		let subTextY = y + this.subY + this.subBaseline + Math.round(context.fontInfo.size / 2);
+
+		let ch1 = this.children[1]; // variable
+		ch1.display(context, x + ch1.x, y + ch1.y);
+
+		super.drawText(context, "→", x + this.arrowX, subTextY);
+
+		let ch2 = this.children[2]; // limit point
+		ch2.display(context, x + ch2.x, y + ch2.y);
+
+		if (this.approachChar) {
+			super.drawText(context, this.approachChar, x + this.approachCharX, subTextY);
+		}
+
+		context.fontInfo.setSizeAbsolute(context, bkpSize);
+
+		let ch0 = this.children[0]; // expression
+		ch0.display(context, x + ch0.x, y + ch0.y);
+	}
+
+	moveTo(direction) {
+		// PREVIOUS enters from right → expression (rightmost); all others → variable (leftmost)
+		return (direction === Expression.PREVIOUS)
+			? this.children[0].moveTo(direction)
+			: this.children[1].moveTo(direction);
+	}
+
+	moveAcross(i, direction) {
+		switch (direction) {
+			case Expression.NEXT:
+				if (i === 1) return this.children[2].moveTo(direction); // variable → limit point
+				if (i === 2) return this.children[0].moveTo(direction); // limit point → expression
+				break;
+			case Expression.PREVIOUS:
+				if (i === 0) return this.children[2].moveTo(direction); // expression → limit point
+				if (i === 2) return this.children[1].moveTo(direction); // limit point → variable
+				break;
+			case Expression.DOWN:
+				if (i === 0) return this.children[1].moveTo(direction); // expression → subscript
+				break;
+			case Expression.UP:
+				if (i === 1 || i === 2) return this.children[0].moveTo(direction); // subscript → expression
+				break;
+		}
+		return this.moveOut(direction);
+	}
+};
+
+const Limit = class extends LimitBase {
+	getTag()  { return "Calculus.Limit.Limit"; }
+	getName() { return CalculusPackage.messages.nameLimit; }
+};
+
+const LimitInferior = class extends LimitBase {
+	getTag()  { return "Calculus.Limit.LimitInferior"; }
+	getName() { return CalculusPackage.messages.nameLimitInferior; }
+	getWord() { return "lim inf"; }
+};
+
+const LimitSuperior = class extends LimitBase {
+	getTag()  { return "Calculus.Limit.LimitSuperior"; }
+	getName() { return CalculusPackage.messages.nameLimitSuperior; }
+	getWord() { return "lim sup"; }
+};
+
 CalculusPackage.setExpressions = function(module) {
 	Formulae.setExpression(module, "Calculus.Integral.IndefiniteIntegral",         IndefiniteIntegral);
 	Formulae.setExpression(module, "Calculus.Integral.DefiniteIntegral",           DefiniteIntegral);
 	Formulae.setExpression(module, "Calculus.Integral.DefiniteIntegralOverDomain", DefiniteIntegralOverDomain);
+	Formulae.setExpression(module, "Calculus.Limit.Limit",                         Limit);
+	Formulae.setExpression(module, "Calculus.Limit.LimitInferior",                 LimitInferior);
+	Formulae.setExpression(module, "Calculus.Limit.LimitSuperior",                 LimitSuperior);
 };
 
