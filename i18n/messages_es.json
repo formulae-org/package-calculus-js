@@ -2,8 +2,6 @@
 	"pathCalculus" : "Cálculo",
 	"pathIntegral" : "Cálculo.Integral",
 
-	"mnemonicIntegral" : "∫",
-
 	"nameIndefiniteIntegral" : "Integral indefinida",
 	"leafIndefiniteIntegral" : "Integral indefinida",
 	"childrenIndefiniteIntegral" : [ "Integrando", "Variable" ],
@@ -25,8 +23,6 @@
 
 	"pathLimit" : "Cálculo.Límite",
 
-	"mnemonicLimit"       : "lim",
-
 	"nameLimit"          : "Límite",
 	"leafLimit"          : "Límite",
 	"nameLimitInferior"  : "Límite inferior",
@@ -41,5 +37,37 @@
 	"editionLimitApproachDirection" : "Dirección de aproximación",
 	"editionLimitBoth"              : "Ambos lados",
 	"editionLimitLeft"              : "Por la izquierda (a⁻)",
-	"editionLimitRight"             : "Por la derecha (a⁺)"
+	"editionLimitRight"             : "Por la derecha (a⁺)",
+
+	"pathDifferential"              : "Cálculo.Diferencial",
+
+	"nameTotalDerivative"           : "Derivada total",
+	"leafTotalDerivative"           : "Derivada total",
+	"nameTotalDerivativeNoVar"      : "Derivada (sin variable)",
+	"leafTotalDerivativeNoVar"      : "Derivada (sin variable)",
+	"namePartialDerivative"         : "Derivada parcial",
+	"leafPartialDerivative"         : "Derivada parcial",
+
+	"childDerivativeFunction"       : "Función",
+	"childDerivativeVariable"       : "Variable",
+
+	"actionEditDerivativeNoVar"     : "Editar derivada",
+
+	"preferenceTotalTitle"           : "Derivada total",
+	"preferenceTotalLeibnizQuotient" : "Cociente de Leibniz (df/dx)",
+	"preferenceTotalLeibnizOperator" : "Operador diferencial de Leibniz (d/dx f)",
+	"preferenceTotalEuler"           : "Euler (Dₓ f)",
+	"preferenceTotalSubscript"       : "Subíndice (fₓ)",
+
+	"preferenceTotalWithoutVariablesTitle"    : "Derivada total sin variables",
+	"preferenceTotalWithoutVariablesLagrange" : "Lagrange (f′)",
+	"preferenceTotalWithoutVariablesNewton"   : "Newton (ẋ)",
+
+	"preferencePartialTitle"           : "Derivada parcial",
+	"preferencePartialLeibnizQuotient" : "Cociente de Leibniz (∂f/∂x)",
+	"preferencePartialLeibnizOperator" : "Operador diferencial de Leibniz (∂/∂x f)",
+
+	"editionDerivativeNoVarTitle"   : "Derivada",
+	"editionDerivativeNoVarOrder"   : "Orden"
 }
+

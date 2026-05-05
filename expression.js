@@ -82,12 +82,11 @@ function drawClosedIntegralOval(context, cx1, cy, cx2, r, lineWidth) {
 
 // ─── Indefinite integral: ∫ f dx ────────────────────────────────────────────
 
-const IndefiniteIntegral = class extends Expression.Function {
-	getTag()                { return "Calculus.Integral.IndefiniteIntegral"; }
-	getName()               { return CalculusPackage.messages.nameIndefiniteIntegral; }
-	getMnemonic()           { return CalculusPackage.messages.mnemonicIntegral; }
-	canHaveChildren(count)  { return count === 2; }
-	getChildName(index)     { return CalculusPackage.messages.childrenIndefiniteIntegral[index]; }
+const IndefiniteIntegral = class extends Expression {
+	getTag()               { return "Calculus.Integral.IndefiniteIntegral"; }
+	getName()              { return CalculusPackage.messages.nameIndefiniteIntegral; }
+	canHaveChildren(count) { return count === 2; }
+	getChildName(index)    { return CalculusPackage.messages.childrenIndefiniteIntegral[index]; }
 
 	prepareDisplay(context) {
 		this.heightSymbol = Math.floor(context.fontInfo.size * 3);
@@ -163,10 +162,9 @@ const IndefiniteIntegral = class extends Expression.Function {
 
 // ─── Definite integral: ∫_a^b f dx ─────────────────────────────────────────
 
-const DefiniteIntegral = class extends Expression.Function {
+const DefiniteIntegral = class extends Expression {
 	getTag()                { return "Calculus.Integral.DefiniteIntegral"; }
 	getName()               { return CalculusPackage.messages.nameDefiniteIntegral; }
-	getMnemonic()           { return CalculusPackage.messages.mnemonicIntegral; }
 	canHaveChildren(count)  { return count === 4; }
 	getChildName(index)     { return CalculusPackage.messages.childrenDefiniteIntegral[index]; }
 
@@ -306,10 +304,9 @@ const DefiniteIntegral = class extends Expression.Function {
 
 const MULTI_SIGN_STEP = 0.80; // < 1.0 so consecutive ∫ signs overlap slightly, giving the stacked-integral look
 
-const DefiniteIntegralOverDomain = class extends Expression.Function {
+const DefiniteIntegralOverDomain = class extends Expression {
 	getTag()                { return "Calculus.Integral.DefiniteIntegralOverDomain"; }
 	getName()               { return CalculusPackage.messages.nameDefiniteIntegralOverDomain; }
-	getMnemonic()           { return CalculusPackage.messages.mnemonicIntegral; }
 	canHaveChildren(count)  { return count === 3; }
 	getChildName(index)     { return CalculusPackage.messages.childrenDefiniteIntegralOverDomain[index]; }
 
@@ -458,9 +455,8 @@ const DefiniteIntegralOverDomain = class extends Expression.Function {
 const WORD_GAP_FRAC = 0.10; // gap below word to subscript, as fraction of fontSize
 const EXPR_GAP_FRAC = 0.20; // gap right of sign column to expression, as fraction of fontSize
 
-const LimitBase = class extends Expression.Function {
+const LimitBase = class extends Expression {
 	getWord()              { return "lim"; }
-	getMnemonic()          { return CalculusPackage.messages.mnemonicLimit; }
 	canHaveChildren(count) { return count === 3; }
 	getChildName(index)    { return CalculusPackage.messages.childrenLimit[index]; }
 
@@ -614,12 +610,728 @@ const LimitSuperior = class extends LimitBase {
 	getWord() { return "lim sup"; }
 };
 
+// ─── Differential: TotalDerivative, TotalDerivativeWithoutVariables, PartialDerivative ──
+
+const TYPE_TOTAL_LEIBNIZ_QUOTIENT  = 1;
+const TYPE_TOTAL_LEIBNIZ_OPERATOR  = 2;
+const TYPE_TOTAL_EULER             = 3;
+const TYPE_TOTAL_SUBSCRIPT         = 4;
+
+const TYPE_TOTAL_NOVAR_LAGRANGE = 1;
+const TYPE_TOTAL_NOVAR_NEWTON   = 2;
+
+const TYPE_PARTIAL_LEIBNIZ_QUOTIENT  = 1;
+const TYPE_PARTIAL_LEIBNIZ_OPERATOR  = 2;
+
+CalculusPackage.styleTotal                 = TYPE_TOTAL_LEIBNIZ_OPERATOR;
+CalculusPackage.styleTotalWithoutVariables = TYPE_TOTAL_NOVAR_LAGRANGE;
+CalculusPackage.stylePartial               = TYPE_PARTIAL_LEIBNIZ_OPERATOR;
+
+const LQ_FUNC_GAP_FRAC     = 0.10; // gap between d^n (or ∂^n) and the function in the quotient numerator, as fraction of fontSize
+const LO_FUNC_GAP_FRAC     = 0.20; // gap between the operator fraction and the function to its right, as fraction of fontSize
+const LEIBNIZ_DEN_GAP_FRAC = 0.15; // gap between d·var groups in the Leibniz denominator, as fraction of fontSize
+
+function derivativeOrder(expression) {
+	let total = 0;
+	for (let i = 1; i < expression.children.length; i++) {
+		let ch = expression.children[i];
+		if (
+			ch.getTag() === "Math.Arithmetic.Exponentiation" &&
+			ch.children.length === 2 &&
+			ch.children[1].getTag() === "Math.Number"
+		) {
+			let n = parseInt(ch.children[1].get("Value"));
+			total += (Number.isInteger(n) && n >= 2) ? n : 1;
+		} else {
+			total += 1;
+		}
+	}
+	return total;
+}
+
+function prepareDisplayLeibnizQuotient(expression, context, total) {
+	const fontSize        = context.fontInfo.size;
+	const symHorzBaseline = Math.round(fontSize / 2);
+	const sym             = total ? "d" : "∂";
+	const order           = derivativeOrder(expression);
+	const symWidth        = Math.ceil(context.measureText(sym).width);
+
+	let ordWidth = 0, ordHorzBaseline = 0;
+	if (order > 1) {
+		let bkp = context.fontInfo.size;
+		context.fontInfo.setSizeRelative(context, LIMIT_SIZE);
+		ordWidth        = Math.ceil(context.measureText(String(order)).width);
+		ordHorzBaseline = Math.round(context.fontInfo.size / 2);
+		context.fontInfo.setSizeAbsolute(context, bkp);
+	}
+
+	let ch0 = expression.children[0];
+	ch0.prepareDisplay(context);
+	for (let i = 1; i < expression.children.length; i++) {
+		expression.children[i].prepareDisplay(context);
+	}
+
+	// Numerator: [sym^order] [ch0], aligned at horzBaseline
+	// d^n block uses Superscript layout; ordHorzBaseline=0 when order≤1 so formula is uniform
+	const dnHorzBaseline  = ordHorzBaseline + symHorzBaseline;
+	const numHorzBaseline = Math.max(dnHorzBaseline, ch0.horzBaseline);
+	const numHeight       = numHorzBaseline + Math.max(
+		fontSize - symHorzBaseline,
+		ch0.height - ch0.horzBaseline
+	);
+	const funcGap  = Math.round(fontSize * LQ_FUNC_GAP_FRAC);
+	const numWidth = symWidth + ordWidth + funcGap + ch0.width;
+
+	// Denominator: [sym var₁] [gap] [sym var₂] …
+	const denGap = Math.round(fontSize * LEIBNIZ_DEN_GAP_FRAC);
+	let denHorzBaseline = symHorzBaseline;
+	let denHeightBelow  = fontSize - symHorzBaseline;
+	let denWidth = 0;
+	for (let i = 1; i < expression.children.length; i++) {
+		let ch = expression.children[i];
+		if (i > 1) denWidth += denGap;
+		denWidth        += symWidth + ch.width;
+		denHorzBaseline  = Math.max(denHorzBaseline, ch.horzBaseline);
+		denHeightBelow   = Math.max(denHeightBelow, ch.height - ch.horzBaseline);
+	}
+	const denHeight = denHorzBaseline + denHeightBelow;
+
+	// Fraction (Division class pattern)
+	const fracWidth        = 3 + Math.max(numWidth, denWidth) + 3;
+	const fracVertBaseline = Math.round(fracWidth / 2);
+	const numX             = fracVertBaseline - Math.round(numWidth / 2);
+	const denX             = fracVertBaseline - Math.round(denWidth / 2);
+	const denY             = numHeight + 3;
+
+	// Child positions (numY = 0)
+	ch0.x = numX + symWidth + ordWidth + funcGap;
+	ch0.y = numHorzBaseline - ch0.horzBaseline;
+
+	let curX = 0;
+	for (let i = 1; i < expression.children.length; i++) {
+		let ch = expression.children[i];
+		if (i > 1) curX += denGap;
+		ch.x = denX + curX + symWidth;
+		ch.y = denY + denHorzBaseline - ch.horzBaseline;
+		curX += symWidth + ch.width;
+	}
+
+	// Display data
+	expression.lqSym         = sym;
+	expression.lqOrder       = order;
+	expression.lqNumSymX     = numX;
+	expression.lqNumSymTextY = numHorzBaseline + Math.round(fontSize / 2);
+	if (order > 1) {
+		expression.lqNumOrdX     = numX + symWidth;
+		expression.lqNumOrdTextY = (numHorzBaseline - symHorzBaseline) + ordHorzBaseline;
+	}
+	expression.lqDenSymTextY = denY + denHorzBaseline + Math.round(fontSize / 2);
+	expression.lqDenSymXs    = [];
+	curX = 0;
+	for (let i = 1; i < expression.children.length; i++) {
+		if (i > 1) curX += denGap;
+		expression.lqDenSymXs.push(denX + curX);
+		curX += symWidth + expression.children[i].width;
+	}
+
+	expression.width        = fracWidth;
+	expression.height       = numHeight + 3 + denHeight;
+	expression.horzBaseline = numHeight + 2;
+	expression.vertBaseline = fracVertBaseline;
+}
+
+function displayLeibnizQuotient(expression, context, x, y, total) {
+	// Fraction bar
+	context.beginPath();
+	context.moveTo(x,                    y - 0.5 + expression.horzBaseline);
+	context.lineTo(x + expression.width, y - 0.5 + expression.horzBaseline);
+	context.stroke();
+
+	// Numerator sym (italic d or ∂)
+	let bkpItalic = context.fontInfo.italic;
+	context.fontInfo.setItalic(context, true);
+	expression.drawText(context, expression.lqSym,
+		x + expression.lqNumSymX,
+		y + expression.lqNumSymTextY
+	);
+	context.fontInfo.setItalic(context, bkpItalic);
+
+	// Order superscript
+	if (expression.lqOrder > 1) {
+		let bkp = context.fontInfo.size;
+		context.fontInfo.setSizeRelative(context, LIMIT_SIZE);
+		expression.drawText(context, String(expression.lqOrder),
+			x + expression.lqNumOrdX,
+			y + expression.lqNumOrdTextY
+		);
+		context.fontInfo.setSizeAbsolute(context, bkp);
+	}
+
+	// Function child
+	let ch0 = expression.children[0];
+	ch0.display(context, x + ch0.x, y + ch0.y);
+
+	// Denominator: italic sym then variable child, for each variable
+	for (let i = 1; i < expression.children.length; i++) {
+		bkpItalic = context.fontInfo.italic;
+		context.fontInfo.setItalic(context, true);
+		expression.drawText(context, expression.lqSym,
+			x + expression.lqDenSymXs[i - 1],
+			y + expression.lqDenSymTextY
+		);
+		context.fontInfo.setItalic(context, bkpItalic);
+
+		let ch = expression.children[i];
+		ch.display(context, x + ch.x, y + ch.y);
+	}
+}
+
+function prepareDisplayLeibnizOperator(expression, context, total) {
+	const fontSize        = context.fontInfo.size;
+	const symHorzBaseline = Math.round(fontSize / 2);
+	const sym             = total ? "d" : "∂";
+	const order           = derivativeOrder(expression);
+	const symWidth        = Math.ceil(context.measureText(sym).width);
+
+	let ordWidth = 0, ordHorzBaseline = 0;
+	if (order > 1) {
+		let bkp = context.fontInfo.size;
+		context.fontInfo.setSizeRelative(context, LIMIT_SIZE);
+		ordWidth        = Math.ceil(context.measureText(String(order)).width);
+		ordHorzBaseline = Math.round(context.fontInfo.size / 2);
+		context.fontInfo.setSizeAbsolute(context, bkp);
+	}
+
+	let ch0 = expression.children[0];
+	ch0.prepareDisplay(context);
+	for (let i = 1; i < expression.children.length; i++) {
+		expression.children[i].prepareDisplay(context);
+	}
+
+	// Numerator: d^n only (no function)
+	const dnHorzBaseline  = ordHorzBaseline + symHorzBaseline;
+	const numHorzBaseline = dnHorzBaseline;
+	const numHeight       = numHorzBaseline + (fontSize - symHorzBaseline);
+	const numWidth        = symWidth + ordWidth;
+
+	// Denominator: [sym var₁] [gap] [sym var₂] …
+	const denGap = Math.round(fontSize * LEIBNIZ_DEN_GAP_FRAC);
+	let denHorzBaseline = symHorzBaseline;
+	let denHeightBelow  = fontSize - symHorzBaseline;
+	let denWidth = 0;
+	for (let i = 1; i < expression.children.length; i++) {
+		let ch = expression.children[i];
+		if (i > 1) denWidth += denGap;
+		denWidth        += symWidth + ch.width;
+		denHorzBaseline  = Math.max(denHorzBaseline, ch.horzBaseline);
+		denHeightBelow   = Math.max(denHeightBelow, ch.height - ch.horzBaseline);
+	}
+	const denHeight = denHorzBaseline + denHeightBelow;
+
+	// Fraction (Division class pattern)
+	const fracWidth        = 3 + Math.max(numWidth, denWidth) + 3;
+	const fracVertBaseline = Math.round(fracWidth / 2);
+	const numX             = fracVertBaseline - Math.round(numWidth / 2);
+	const denX             = fracVertBaseline - Math.round(denWidth / 2);
+	const denY             = numHeight + 3;
+	const fracHorzBaseline = numHeight + 2;
+	const fracHeight       = numHeight + 3 + denHeight;
+
+	// Function to the right of the fraction
+	const operatorGap = Math.round(fontSize * LO_FUNC_GAP_FRAC);
+	ch0.x = fracWidth + operatorGap;
+	ch0.y = fracHorzBaseline - ch0.horzBaseline;
+
+	// Variable children in denominator
+	let curX = 0;
+	for (let i = 1; i < expression.children.length; i++) {
+		let ch = expression.children[i];
+		if (i > 1) curX += denGap;
+		ch.x = denX + curX + symWidth;
+		ch.y = denY + denHorzBaseline - ch.horzBaseline;
+		curX += symWidth + ch.width;
+	}
+
+	// Display data
+	expression.loSym         = sym;
+	expression.loOrder       = order;
+	expression.loFracWidth   = fracWidth;
+	expression.loNumSymX     = numX;
+	expression.loNumSymTextY = numHorzBaseline + Math.round(fontSize / 2);
+	if (order > 1) {
+		expression.loNumOrdX     = numX + symWidth;
+		expression.loNumOrdTextY = (numHorzBaseline - symHorzBaseline) + ordHorzBaseline;
+	}
+	expression.loDenSymTextY = denY + denHorzBaseline + Math.round(fontSize / 2);
+	expression.loDenSymXs    = [];
+	curX = 0;
+	for (let i = 1; i < expression.children.length; i++) {
+		if (i > 1) curX += denGap;
+		expression.loDenSymXs.push(denX + curX);
+		curX += symWidth + expression.children[i].width;
+	}
+
+	expression.width        = fracWidth + operatorGap + ch0.width;
+	expression.horzBaseline = fracHorzBaseline;
+	expression.height       = Math.max(fracHeight, fracHorzBaseline + (ch0.height - ch0.horzBaseline));
+	expression.vertBaseline = Math.round(expression.width / 2);
+}
+
+function displayLeibnizOperator(expression, context, x, y, total) {
+	// Fraction bar — spans only the fraction, not the full expression
+	context.beginPath();
+	context.moveTo(x,                          y - 0.5 + expression.horzBaseline);
+	context.lineTo(x + expression.loFracWidth, y - 0.5 + expression.horzBaseline);
+	context.stroke();
+
+	// Numerator sym (italic d or ∂)
+	let bkpItalic = context.fontInfo.italic;
+	context.fontInfo.setItalic(context, true);
+	expression.drawText(context, expression.loSym,
+		x + expression.loNumSymX,
+		y + expression.loNumSymTextY
+	);
+	context.fontInfo.setItalic(context, bkpItalic);
+
+	// Order superscript
+	if (expression.loOrder > 1) {
+		let bkp = context.fontInfo.size;
+		context.fontInfo.setSizeRelative(context, LIMIT_SIZE);
+		expression.drawText(context, String(expression.loOrder),
+			x + expression.loNumOrdX,
+			y + expression.loNumOrdTextY
+		);
+		context.fontInfo.setSizeAbsolute(context, bkp);
+	}
+
+	// Denominator: italic sym + variable child, for each variable
+	for (let i = 1; i < expression.children.length; i++) {
+		bkpItalic = context.fontInfo.italic;
+		context.fontInfo.setItalic(context, true);
+		expression.drawText(context, expression.loSym,
+			x + expression.loDenSymXs[i - 1],
+			y + expression.loDenSymTextY
+		);
+		context.fontInfo.setItalic(context, bkpItalic);
+
+		let ch = expression.children[i];
+		ch.display(context, x + ch.x, y + ch.y);
+	}
+
+	// Function to the right of the fraction
+	let ch0 = expression.children[0];
+	ch0.display(context, x + ch0.x, y + ch0.y);
+}
+
+function prepareDisplayEuler(expression, context) {
+	const fontSize      = context.fontInfo.size;
+	const dHorzBaseline = Math.round(fontSize / 2);
+	const dWidth        = Math.ceil(context.measureText("D").width);
+	const order         = derivativeOrder(expression);
+
+	let ordWidth = 0, ordHorzBaseline_sm = 0, smallFontSize = 0;
+	if (order > 1) {
+		let bkp = context.fontInfo.size;
+		context.fontInfo.setSizeRelative(context, LIMIT_SIZE);
+		smallFontSize      = context.fontInfo.size;
+		ordWidth           = Math.ceil(context.measureText(String(order)).width);
+		ordHorzBaseline_sm = Math.round(smallFontSize / 2);
+		context.fontInfo.setSizeAbsolute(context, bkp);
+	}
+
+	let ch0 = expression.children[0];
+	ch0.prepareDisplay(context);
+
+	let subWidth = 0, subHorzBaseline = 0, subHeightBelow = 0;
+	{
+		let bkp = context.fontInfo.size;
+		context.fontInfo.setSizeRelative(context, LIMIT_SIZE);
+		for (let i = 1; i < expression.children.length; i++) {
+			expression.children[i].prepareDisplay(context);
+		}
+		for (let i = 1; i < expression.children.length; i++) {
+			let ch = expression.children[i];
+			subWidth        += ch.width;
+			subHorzBaseline  = Math.max(subHorzBaseline, ch.horzBaseline);
+			subHeightBelow   = Math.max(subHeightBelow, ch.height - ch.horzBaseline);
+		}
+		context.fontInfo.setSizeAbsolute(context, bkp);
+	}
+
+	// ordHorzBaseline_sm = 0 when order ≤ 1, so this formula is uniform
+	const signHorzBaseline  = ordHorzBaseline_sm + dHorzBaseline;
+	const exprGap           = Math.round(fontSize * EXPR_GAP_FRAC);
+	expression.horzBaseline = Math.max(signHorzBaseline, ch0.horzBaseline);
+	const signOffset        = expression.horzBaseline - signHorzBaseline;
+
+	// Subscript y: standard Subscript-class formula (sub center at D's bottom)
+	const subY = expression.horzBaseline - dHorzBaseline + fontSize - subHorzBaseline;
+
+	// child positions
+	const signColumnWidth = dWidth + Math.max(ordWidth, subWidth);
+	ch0.x = signColumnWidth + exprGap;
+	ch0.y = expression.horzBaseline - ch0.horzBaseline;
+
+	let curSubX = dWidth;
+	for (let i = 1; i < expression.children.length; i++) {
+		let ch = expression.children[i];
+		ch.x = curSubX;
+		ch.y = subY + (subHorzBaseline - ch.horzBaseline);
+		curSubX += ch.width;
+	}
+
+	// display data
+	expression.euOrder    = order;
+	expression.euDTextY   = expression.horzBaseline + Math.round(fontSize / 2);
+	expression.euOrdX     = dWidth;
+	expression.euOrdTextY = signOffset + ordHorzBaseline_sm + Math.round(smallFontSize / 2);
+
+	expression.width        = ch0.x + ch0.width;
+	expression.height       = Math.max(
+		expression.horzBaseline - dHorzBaseline + fontSize + subHeightBelow,
+		expression.horzBaseline + (ch0.height - ch0.horzBaseline)
+	);
+	expression.vertBaseline = Math.round(expression.width / 2);
+}
+
+function displayEuler(expression, context, x, y) {
+	// D (capital, upright — no italic override)
+	expression.drawText(context, "D", x, y + expression.euDTextY);
+
+	// Superscript order + subscript variable children, both at LIMIT_SIZE
+	let bkp = context.fontInfo.size;
+	context.fontInfo.setSizeRelative(context, LIMIT_SIZE);
+
+	if (expression.euOrder > 1) {
+		expression.drawText(context, String(expression.euOrder),
+			x + expression.euOrdX,
+			y + expression.euOrdTextY
+		);
+	}
+	for (let i = 1; i < expression.children.length; i++) {
+		let ch = expression.children[i];
+		ch.display(context, x + ch.x, y + ch.y);
+	}
+
+	context.fontInfo.setSizeAbsolute(context, bkp);
+
+	// Function child at full font size
+	let ch0 = expression.children[0];
+	ch0.display(context, x + ch0.x, y + ch0.y);
+}
+
+function prepareDisplaySubscript(expression, context) {
+	// TODO
+}
+
+function displaySubscript(expression, context, x, y) {
+	// TODO
+}
+
+function prepareDisplayLagrange(expression, context) {
+	// TODO
+}
+
+function displayLagrange(expression, context, x, y) {
+	// TODO
+}
+
+function prepareDisplayNewton(expression, context) {
+	// TODO
+}
+
+function displayNewton(expression, context, x, y) {
+	// TODO
+}
+
+const TotalDerivative = class extends Expression {
+	getTag()  { return "Calculus.Differential.TotalDerivative"; }
+	getName() { return CalculusPackage.messages.nameTotalDerivative; }
+	canHaveChildren(count) { return count >= 2; }
+	getChildName(index) {
+		return index === 0 ?
+			CalculusPackage.messages.childDerivativeFunction :
+			CalculusPackage.messages.childDerivativeVariable
+		;
+	}
+	
+	prepareDisplay(context) {
+		switch (CalculusPackage.styleTotal) {
+			case TYPE_TOTAL_LEIBNIZ_QUOTIENT:
+				prepareDisplayLeibnizQuotient(this, context, true);
+				break;
+			
+			case TYPE_TOTAL_LEIBNIZ_OPERATOR:
+				prepareDisplayLeibnizOperator(this, context, true);
+				break;
+			
+			case TYPE_TOTAL_EULER:
+				prepareDisplayEuler(this, context);
+				break;
+			
+			case TYPE_TOTAL_SUBSCRIPT:
+				prepareDisplaySubscript(this, context);
+				break;
+		}
+	}
+	
+	display(context, x, y) {
+		switch (CalculusPackage.styleTotal) {
+			case TYPE_TOTAL_LEIBNIZ_QUOTIENT:
+				displayLeibnizQuotient(this, context, x, y, true);
+				break;
+
+			case TYPE_TOTAL_LEIBNIZ_OPERATOR:
+				displayLeibnizOperator(this, context, x, y, true);
+				break;
+
+			case TYPE_TOTAL_EULER:
+				displayEuler(this, context, x, y);
+				break;
+
+			case TYPE_TOTAL_SUBSCRIPT:
+				displaySubscript(this, context, x, y);
+				break;
+		}
+	}
+	
+	moveTo(direction) {
+		return direction === Expression.PREVIOUS ?
+			this.children[0].moveTo(direction) :
+			this.children[1].moveTo(direction)
+		;
+	}
+	
+	moveAcross(i, direction) {
+		let last = this.children.length - 1;
+		
+		if (direction === Expression.NEXT     && i < last) return this.children[i + 1].moveTo(direction);
+		if (direction === Expression.PREVIOUS && i > 0   ) return this.children[i - 1].moveTo(direction);
+		
+		return this.moveOut(direction);
+	}
+};
+
+const TotalDerivativeNoVar = class extends Expression {
+	getTag()  { return "Calculus.Differential.TotalDerivativeWithoutVariables"; }
+	getName() { return CalculusPackage.messages.nameTotalDerivativeNoVar; }
+	canHaveChildren(count) { return count === 1; }
+	getChildName(index) { return CalculusPackage.messages.childDerivativeFunction; }
+	
+	getSerializationNames() { return [ "Order" ]; }
+	async getSerializationStrings() { return [ String(this.order) ]; }
+	setSerializationStrings(strings, promises) { this.order = parseInt(strings[0]); }
+	
+	prepareDisplay(context) {
+		switch (CalculusPackage.styleTotalWithoutVariables) {
+			case TYPE_TOTAL_NOVAR_LAGRANGE:
+				prepareDisplayLagrange(this, context);
+				break;
+			
+			case TYPE_TOTAL_NOVAR_NEWTON:
+				prepareDisplayNewton(this, context);
+				break;
+		}
+	}
+	
+	display(context, x, y) {
+		switch (CalculusPackage.styleTotalWithoutVariables) {
+			case TYPE_TOTAL_NOVAR_LAGRANGE:
+				displayLagrange(this, context, x, y);
+				break;
+
+			case TYPE_TOTAL_NOVAR_NEWTON:
+				displayNewton(this, context, x, y);
+				break;
+		}
+	}
+	
+	moveTo(direction) {
+		return this.children[0].moveTo(direction);
+	}
+};
+
+const PartialDerivative = class extends Expression {
+	getTag()               { return "Calculus.Differential.PartialDerivative"; }
+	getName()              { return CalculusPackage.messages.namePartialDerivative; }
+	canHaveChildren(count) { return count >= 2; }
+	
+	getChildName(index) {
+		return index === 0 ?
+			CalculusPackage.messages.childDerivativeFunction :
+			CalculusPackage.messages.childDerivativeVariable
+		;
+	}
+	
+	prepareDisplay(context) {
+		switch (CalculusPackage.stylePartial) {
+			case TYPE_PARTIAL_LEIBNIZ_QUOTIENT:
+				prepareDisplayLeibnizQuotient(this, context, false);
+				break;
+			
+			case TYPE_PARTIAL_LEIBNIZ_OPERATOR:
+				prepareDisplayLeibnizOperator(this, context, false);
+				break;
+		}
+	}
+	
+	display(context, x, y) {
+		switch (CalculusPackage.stylePartial) {
+			case TYPE_PARTIAL_LEIBNIZ_QUOTIENT:
+				displayLeibnizQuotient(this, context, x, y, false);
+				break;
+
+			case TYPE_PARTIAL_LEIBNIZ_OPERATOR:
+				displayLeibnizOperator(this, context, x, y, false);
+				break;
+		}
+	}
+	
+	moveTo(direction) {
+		return direction === Expression.PREVIOUS ?
+			this.children[0].moveTo(direction) :
+			this.children[1].moveTo(direction)
+		;
+	}
+	
+	moveAcross(i, direction) {
+		let last = this.children.length - 1;
+		
+		if (direction === Expression.NEXT     && i < last) return this.children[i + 1].moveTo(direction);
+		if (direction === Expression.PREVIOUS && i > 0   ) return this.children[i - 1].moveTo(direction);
+		
+		return this.moveOut(direction);
+	}
+};
+
 CalculusPackage.setExpressions = function(module) {
 	Formulae.setExpression(module, "Calculus.Integral.IndefiniteIntegral",         IndefiniteIntegral);
 	Formulae.setExpression(module, "Calculus.Integral.DefiniteIntegral",           DefiniteIntegral);
 	Formulae.setExpression(module, "Calculus.Integral.DefiniteIntegralOverDomain", DefiniteIntegralOverDomain);
-	Formulae.setExpression(module, "Calculus.Limit.Limit",                         Limit);
-	Formulae.setExpression(module, "Calculus.Limit.LimitInferior",                 LimitInferior);
-	Formulae.setExpression(module, "Calculus.Limit.LimitSuperior",                 LimitSuperior);
+	
+	Formulae.setExpression(module, "Calculus.Limit.Limit",         Limit);
+	Formulae.setExpression(module, "Calculus.Limit.LimitInferior", LimitInferior);
+	Formulae.setExpression(module, "Calculus.Limit.LimitSuperior", LimitSuperior);
+	
+	Formulae.setExpression(module, "Calculus.Differential.TotalDerivative",                 TotalDerivative);
+	Formulae.setExpression(module, "Calculus.Differential.TotalDerivativeWithoutVariables", TotalDerivativeNoVar);
+	Formulae.setExpression(module, "Calculus.Differential.PartialDerivative",               PartialDerivative);
+};
+
+CalculusPackage.isConfigurable = () => true;
+
+CalculusPackage.onConfiguration = () => {
+	let table = document.createElement("table");
+	table.classList.add("bordered");
+	
+	let row, th, col, radio;
+	
+	////////////////////////////////////////////////////////////
+	
+	row = table.insertRow();
+	th = document.createElement("th");
+	th.appendChild(document.createTextNode(CalculusPackage.messages.preferenceTotalTitle));
+	row.appendChild(th);
+	
+	row = table.insertRow();
+	col = row.insertCell();
+	
+	radio = document.createElement("input"); radio.type = "radio"; radio.name = "total"; radio.value = TYPE_TOTAL_LEIBNIZ_QUOTIENT;
+	radio.checked = (radio.value == CalculusPackage.styleTotal);
+	col.appendChild(radio);
+	col.appendChild(document.createTextNode(CalculusPackage.messages.preferenceTotalLeibnizQuotient));
+	
+	col.appendChild(document.createElement("br"));
+	
+	radio = document.createElement("input"); radio.type = "radio"; radio.name = "total"; radio.value = TYPE_TOTAL_LEIBNIZ_OPERATOR;
+	radio.checked = (radio.value == CalculusPackage.styleTotal);
+	col.appendChild(radio);
+	col.appendChild(document.createTextNode(CalculusPackage.messages.preferenceTotalLeibnizOperator));
+	
+	col.appendChild(document.createElement("br"));
+	
+	radio = document.createElement("input"); radio.type = "radio"; radio.name = "total"; radio.value = TYPE_TOTAL_EULER;
+	radio.checked = (radio.value == CalculusPackage.styleTotal);
+	col.appendChild(radio);
+	col.appendChild(document.createTextNode(CalculusPackage.messages.preferenceTotalEuler));
+	
+	col.appendChild(document.createElement("br"));
+	
+	radio = document.createElement("input"); radio.type = "radio"; radio.name = "total"; radio.value = TYPE_TOTAL_SUBSCRIPT;
+	radio.checked = (radio.value == CalculusPackage.styleTotal);
+	col.appendChild(radio);
+	col.appendChild(document.createTextNode(CalculusPackage.messages.preferenceTotalSubscript));
+	
+	////////////////////////////////////////////////////////////
+	
+	row = table.insertRow();
+	th = document.createElement("th");
+	th.appendChild(document.createTextNode(CalculusPackage.messages.preferenceTotalWithoutVariablesTitle));
+	row.appendChild(th);
+	
+	row = table.insertRow();
+	col = row.insertCell();
+	
+	radio = document.createElement("input"); radio.type = "radio"; radio.name = "totalwov"; radio.value = TYPE_TOTAL_NOVAR_LAGRANGE;
+	radio.checked = (radio.value == CalculusPackage.styleTotalWithoutVariables);
+	col.appendChild(radio);
+	col.appendChild(document.createTextNode(CalculusPackage.messages.preferenceTotalWithoutVariablesLagrange));
+	
+	col.appendChild(document.createElement("br"));
+	
+	radio = document.createElement("input"); radio.type = "radio"; radio.name = "totalwov"; radio.value = TYPE_TOTAL_NOVAR_NEWTON;
+	radio.checked = (radio.value == CalculusPackage.styleTotalWithoutVariables);
+	col.appendChild(radio);
+	col.appendChild(document.createTextNode(CalculusPackage.messages.preferenceTotalWithoutVariablesNewton));
+	
+	////////////////////////////////////////////////////////////
+	
+	row = table.insertRow();
+	th = document.createElement("th");
+	th.appendChild(document.createTextNode(CalculusPackage.messages.preferencePartialTitle));
+	row.appendChild(th);
+	
+	row = table.insertRow();
+	col = row.insertCell();
+	
+	radio = document.createElement("input"); radio.type = "radio"; radio.name = "partial"; radio.value = TYPE_PARTIAL_LEIBNIZ_QUOTIENT;
+	radio.checked = (radio.value == CalculusPackage.stylePartial);
+	col.appendChild(radio);
+	col.appendChild(document.createTextNode(CalculusPackage.messages.preferencePartialLeibnizQuotient));
+	
+	col.appendChild(document.createElement("br"));
+	
+	radio = document.createElement("input"); radio.type = "radio"; radio.name = "partial"; radio.value = TYPE_PARTIAL_LEIBNIZ_OPERATOR;
+	radio.checked = (radio.value == CalculusPackage.stylePartial);
+	col.appendChild(radio);
+	col.appendChild(document.createTextNode(CalculusPackage.messages.preferencePartialLeibnizOperator));
+	
+	////////////////////////////////////////////////////////////
+	
+	row = table.insertRow();
+	th = document.createElement("th");
+	const button = document.createElement("button");
+	button.innerText = "Ok";
+	button.addEventListener("click", () => CalculusPackage.onChangeStyle());
+	th.appendChild(button);
+	row.appendChild(th);
+	
+	////////////////////////////////////////////////////////////
+	
+	Formulae.setModal(table);
+};
+
+CalculusPackage.onChangeStyle = function() {
+	let total = document.querySelector('input[name="total"]:checked');
+	if (total) CalculusPackage.styleTotal = parseInt(total.value);
+	
+	let totalwov = document.querySelector('input[name="totalwov"]:checked');
+	if (totalwov) CalculusPackage.styleTotalWithoutVariables = parseInt(totalwov.value);
+	
+	let partial = document.querySelector('input[name="partial"]:checked');
+	if (partial) CalculusPackage.stylePartial = parseInt(partial.value);
+	
+	Formulae.resetModal();
+	Formulae.refreshHandlers();
 };
 

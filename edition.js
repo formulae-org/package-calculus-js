@@ -137,6 +137,46 @@ CalculusPackage.actionEditDefiniteIntegralOverDomain = function() {
 	Formulae.setModal(CalculusPackage.createDIODForm);
 };
 
+CalculusPackage.editionCreateTotalDerivativeNoVar = function() {
+	let newExpr = Formulae.createExpression("Calculus.Differential.TotalDerivativeWithoutVariables");
+	newExpr.order = 1;
+	Formulae.sExpression.replaceBy(newExpr);
+	newExpr.addChild(Formulae.sExpression);
+	Formulae.sHandler.prepareDisplay();
+	Formulae.sHandler.display();
+	Formulae.setSelected(Formulae.sHandler, Formulae.sExpression, false);
+};
+
+CalculusPackage.ensureDerivativeNoVarForm = function() {
+	if (CalculusPackage.derivativeNoVarForm !== undefined) return;
+	let table = document.createElement("table");
+	table.classList.add("bordered");
+	table.innerHTML = `
+<tr><th colspan=2>${CalculusPackage.messages.editionDerivativeNoVarTitle}
+<tr><td>${CalculusPackage.messages.editionDerivativeNoVarOrder}<td><input type="number" value="1" min="0">
+<tr><th colspan=2><button>Ok</button>
+`;
+	CalculusPackage.derivativeNoVarForm = table;
+};
+
+CalculusPackage.actionEditDerivativeNoVar = function() {
+	CalculusPackage.ensureDerivativeNoVarForm();
+	let tableRows = CalculusPackage.derivativeNoVarForm.rows;
+	let order = tableRows[1].cells[1].firstChild;
+	let ok    = tableRows[2].cells[0].firstChild;
+	order.value = Formulae.sExpression.order ?? 1;
+	ok.onclick = () => {
+		let n = parseInt(order.value);
+		if (isNaN(n) || n < 0) return;
+		Formulae.resetModal();
+		Formulae.sExpression.order = n;
+		Formulae.sHandler.prepareDisplay();
+		Formulae.sHandler.display();
+		Formulae.setSelected(Formulae.sHandler, Formulae.sExpression, false);
+	};
+	Formulae.setModal(CalculusPackage.derivativeNoVarForm);
+};
+
 CalculusPackage.setEditions = function() {
 	Formulae.addEdition(
 		this.messages.pathIntegral, null, this.messages.leafIndefiniteIntegral,
@@ -162,6 +202,18 @@ CalculusPackage.setEditions = function() {
 		this.messages.pathLimit, null, this.messages.leafLimitSuperior,
 		() => Expression.multipleEdition("Calculus.Limit.LimitSuperior", 3, 0)
 	);
+	Formulae.addEdition(
+		this.messages.pathDifferential, null, this.messages.leafTotalDerivative,
+		() => Expression.multipleEdition("Calculus.Differential.TotalDerivative", 2, 0)
+	);
+	Formulae.addEdition(
+		this.messages.pathDifferential, null, this.messages.leafTotalDerivativeNoVar,
+		() => CalculusPackage.editionCreateTotalDerivativeNoVar()
+	);
+	Formulae.addEdition(
+		this.messages.pathDifferential, null, this.messages.leafPartialDerivative,
+		() => Expression.multipleEdition("Calculus.Differential.PartialDerivative", 2, 0)
+	);
 };
 
 CalculusPackage.setActions = function() {
@@ -178,4 +230,9 @@ CalculusPackage.setActions = function() {
 	Formulae.addAction("Calculus.Limit.Limit",         editLimitAction);
 	Formulae.addAction("Calculus.Limit.LimitInferior", editLimitAction);
 	Formulae.addAction("Calculus.Limit.LimitSuperior", editLimitAction);
+	Formulae.addAction("Calculus.Differential.TotalDerivativeWithoutVariables", {
+		isAvailableNow: () => true,
+		getDescription: () => CalculusPackage.messages.actionEditDerivativeNoVar,
+		doAction: () => CalculusPackage.actionEditDerivativeNoVar()
+	});
 };

@@ -2,8 +2,6 @@
 	"pathCalculus" : "Calculus",
 	"pathIntegral" : "Calculus.Integral",
 
-	"mnemonicIntegral" : "∫",
-
 	"nameIndefiniteIntegral" : "Indefinite integral",
 	"leafIndefiniteIntegral" : "Indefinite integral",
 	"childrenIndefiniteIntegral" : [ "Integrand", "Variable" ],
@@ -25,8 +23,6 @@
 
 	"pathLimit" : "Calculus.Limit",
 
-	"mnemonicLimit"       : "lim",
-
 	"nameLimit"          : "Limit",
 	"leafLimit"          : "Limit",
 	"nameLimitInferior"  : "Limit inferior",
@@ -41,5 +37,37 @@
 	"editionLimitApproachDirection" : "Approach direction",
 	"editionLimitBoth"              : "Both sides",
 	"editionLimitLeft"              : "From left (a⁻)",
-	"editionLimitRight"             : "From right (a⁺)"
+	"editionLimitRight"             : "From right (a⁺)",
+
+	"pathDifferential"              : "Calculus.Differential",
+
+	"nameTotalDerivative"           : "Total derivative",
+	"leafTotalDerivative"           : "Total derivative",
+	"nameTotalDerivativeNoVar"      : "Derivative (no variable)",
+	"leafTotalDerivativeNoVar"      : "Derivative (no variable)",
+	"namePartialDerivative"         : "Partial derivative",
+	"leafPartialDerivative"         : "Partial derivative",
+
+	"childDerivativeFunction"       : "Function",
+	"childDerivativeVariable"       : "Variable",
+
+	"actionEditDerivativeNoVar"     : "Edit derivative",
+
+	"preferenceTotalTitle"           : "Total derivative",
+	"preferenceTotalLeibnizQuotient" : "Leibniz quotient (df/dx)",
+	"preferenceTotalLeibnizOperator" : "Leibniz differential operator (d/dx f)",
+	"preferenceTotalEuler"           : "Euler (Dₓ f)",
+	"preferenceTotalSubscript"       : "Subscript (fₓ)",
+
+	"preferenceTotalWithoutVariablesTitle"    : "Total derivative without variables",
+	"preferenceTotalWithoutVariablesLagrange" : "Lagrange (f′)",
+	"preferenceTotalWithoutVariablesNewton"   : "Newton (ẋ)",
+
+	"preferencePartialTitle"           : "Partial derivative",
+	"preferencePartialLeibnizQuotient" : "Leibniz quotient (∂f/∂x)",
+	"preferencePartialLeibnizOperator" : "Leibniz differential operator (∂/∂x f)",
+
+	"editionDerivativeNoVarTitle" : "Derivative",
+	"editionDerivativeNoVarOrder" : "Order"
 }
+
