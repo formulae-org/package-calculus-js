@@ -1021,27 +1021,209 @@ function displayEuler(expression, context, x, y) {
 }
 
 function prepareDisplaySubscript(expression, context) {
-	// TODO
+	let ch0 = expression.children[0];
+	ch0.prepareDisplay(context);
+
+	const parens = ch0.parenthesesAsOperator() || ch0.parenthesesWhenSuperSubscripted();
+	ch0.x = parens ? 4 : 0;
+	ch0.y = 0;
+
+	const subStartX = ch0.x + ch0.width + (parens ? 4 : 0) + 2;
+
+	const items = [];
+	let subHorzBaseline = 0, subHeightBelow = 0;
+	{
+		let bkp = context.fontInfo.size;
+		context.fontInfo.setSizeRelative(context, LIMIT_SIZE);
+
+		for (let i = 1; i < expression.children.length; i++) {
+			let ch = expression.children[i];
+			let sub, repeat;
+			let isExp = (
+				ch.getTag() === "Math.Arithmetic.Exponentiation" &&
+				ch.children.length === 2 &&
+				ch.children[1].getTag() === "Math.Number"
+			);
+			if (isExp) {
+				let n = parseInt(ch.children[1].get("Value"));
+				if (Number.isInteger(n) && n >= 2) {
+					sub = ch.children[0];
+					repeat = n;
+				} else {
+					isExp = false;
+				}
+			}
+			if (!isExp) { sub = ch; repeat = 1; }
+
+			sub.prepareDisplay(context);
+			subHorzBaseline = Math.max(subHorzBaseline, sub.horzBaseline);
+			subHeightBelow  = Math.max(subHeightBelow, sub.height - sub.horzBaseline);
+			for (let k = 0; k < repeat; k++) items.push(sub);
+		}
+
+		context.fontInfo.setSizeAbsolute(context, bkp);
+	}
+
+	const subY = (ch0.height >= subHorzBaseline)
+		? ch0.height - subHorzBaseline
+		: ch0.horzBaseline;
+
+	let curX = 0;
+	const sbItems = items.map(sub => {
+		const pos = { expr: sub, xOffset: subStartX + curX, yOffset: subY + (subHorzBaseline - sub.horzBaseline) };
+		curX += sub.width;
+		return pos;
+	});
+
+	expression.sbParens     = parens;
+	expression.sbItems      = sbItems;
+	expression.width        = subStartX + curX;
+	expression.height       = Math.max(ch0.height, subY + subHorzBaseline + subHeightBelow);
+	expression.horzBaseline = ch0.horzBaseline;
+	expression.vertBaseline = ch0.x + ch0.vertBaseline;
 }
 
 function displaySubscript(expression, context, x, y) {
-	// TODO
+	let ch0 = expression.children[0];
+
+	if (expression.sbParens) {
+		ch0.drawParenthesesAround(context, x + ch0.x, y + ch0.y);
+	}
+	ch0.display(context, x + ch0.x, y + ch0.y);
+
+	let bkp = context.fontInfo.size;
+	context.fontInfo.setSizeRelative(context, LIMIT_SIZE);
+
+	for (const { expr, xOffset, yOffset } of expression.sbItems) {
+		expr.display(context, x + xOffset, y + yOffset);
+	}
+
+	context.fontInfo.setSizeAbsolute(context, bkp);
 }
 
 function prepareDisplayLagrange(expression, context) {
-	// TODO
+	const order = expression.order;
+	let ch0 = expression.children[0];
+	ch0.prepareDisplay(context);
+
+	if (order === 0) {
+		ch0.x = ch0.y = 0;
+		expression.width        = ch0.width;
+		expression.height       = ch0.height;
+		expression.horzBaseline = ch0.horzBaseline;
+		expression.vertBaseline = ch0.vertBaseline;
+		expression.lgMark       = "";
+		expression.lgParens     = false;
+		return;
+	}
+
+	const mark = order === 1 ? "′" : order === 2 ? "″" : order === 3 ? "‴" : "(" + order + ")";
+
+	let markWidth, smallFontSize;
+	{
+		let bkp = context.fontInfo.size;
+		context.fontInfo.setSizeRelative(context, LIMIT_SIZE);
+		smallFontSize = context.fontInfo.size;
+		markWidth = Math.ceil(context.measureText(mark).width);
+		context.fontInfo.setSizeAbsolute(context, bkp);
+	}
+
+	const markHorzBaseline = Math.round(smallFontSize / 2);
+	const parens = ch0.parenthesesAsOperator() || ch0.parenthesesWhenSuperSubscripted();
+
+	ch0.x = parens ? 4 : 0;
+	ch0.y = markHorzBaseline;
+
+	const markX = ch0.x + ch0.width + (parens ? 4 : 0) + 2;
+
+	expression.width        = markX + markWidth;
+	expression.height       = markHorzBaseline + ch0.height;
+	expression.horzBaseline = markHorzBaseline + ch0.horzBaseline;
+	expression.vertBaseline = ch0.x + ch0.vertBaseline;
+
+	expression.lgMark      = mark;
+	expression.lgMarkX     = markX;
+	expression.lgMarkTextY = markHorzBaseline + Math.round(smallFontSize / 2);
+	expression.lgParens    = parens;
 }
 
 function displayLagrange(expression, context, x, y) {
-	// TODO
+	let ch0 = expression.children[0];
+
+	if (expression.lgParens) {
+		ch0.drawParenthesesAround(context, x + ch0.x, y + ch0.y);
+	}
+	ch0.display(context, x + ch0.x, y + ch0.y);
+
+	if (expression.lgMark !== "") {
+		let bkp = context.fontInfo.size;
+		context.fontInfo.setSizeRelative(context, LIMIT_SIZE);
+		expression.drawText(context, expression.lgMark, x + expression.lgMarkX, y + expression.lgMarkTextY);
+		context.fontInfo.setSizeAbsolute(context, bkp);
+	}
 }
 
 function prepareDisplayNewton(expression, context) {
-	// TODO
+	const order = expression.order;
+
+	if (order === 0 || order >= 4) {
+		prepareDisplayLagrange(expression, context);
+		expression.ntMode = "mark";
+		return;
+	}
+
+	expression.ntMode = "dots";
+
+	const fontSize   = context.fontInfo.size;
+	const dotRadius  = Math.max(1, Math.round(fontSize * 0.08));
+	const dotSpacing = 2 * dotRadius + 2;
+
+	let ch0 = expression.children[0];
+	ch0.prepareDisplay(context);
+
+	const parens    = ch0.parenthesesAsOperator() || ch0.parenthesesWhenSuperSubscripted();
+	const bodyWidth = ch0.width + (parens ? 8 : 0);
+	const dotClusterWidth = (order - 1) * dotSpacing + 2 * dotRadius;
+	const expressionWidth = Math.max(bodyWidth, dotClusterWidth);
+	const midX      = Math.round(expressionWidth / 2);
+
+	ch0.x = Math.round((expressionWidth - bodyWidth) / 2) + (parens ? 4 : 0);
+	ch0.y = 2 * dotRadius + 2;
+
+	const ntDotCenters = [];
+	const startX = midX - Math.floor((order - 1) * dotSpacing / 2);
+	for (let i = 0; i < order; i++) ntDotCenters.push(startX + i * dotSpacing);
+
+	expression.width        = expressionWidth;
+	expression.height       = ch0.y + ch0.height;
+	expression.horzBaseline = ch0.y + ch0.horzBaseline;
+	expression.vertBaseline = ch0.x + ch0.vertBaseline;
+
+	expression.ntDotRadius  = dotRadius;
+	expression.ntDotCenterY = dotRadius + 1;
+	expression.ntDotCenters = ntDotCenters;
+	expression.ntParens     = parens;
 }
 
 function displayNewton(expression, context, x, y) {
-	// TODO
+	if (expression.ntMode !== "dots") {
+		displayLagrange(expression, context, x, y);
+		return;
+	}
+
+	let ch0 = expression.children[0];
+
+	if (expression.ntParens) {
+		ch0.drawParenthesesAround(context, x + ch0.x, y + ch0.y);
+	}
+	ch0.display(context, x + ch0.x, y + ch0.y);
+
+	const dotY = y + expression.ntDotCenterY;
+	for (const dotX of expression.ntDotCenters) {
+		context.beginPath();
+		context.arc(x + dotX, dotY, expression.ntDotRadius, 0, 2 * Math.PI);
+		context.fill();
+	}
 }
 
 const TotalDerivative = class extends Expression {
