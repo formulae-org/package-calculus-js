@@ -214,6 +214,10 @@ CalculusPackage.setEditions = function() {
 		this.messages.pathDifferential, null, this.messages.leafPartialDerivative,
 		() => Expression.multipleEdition("Calculus.Differential.PartialDerivative", 2, 0)
 	);
+	Formulae.addEdition(
+		this.messages.pathCalculus, null, this.messages.leafEvaluationBar,
+		() => Expression.multipleEdition("Calculus.EvaluationBar", 3, 0)
+	);
 };
 
 CalculusPackage.setActions = function() {

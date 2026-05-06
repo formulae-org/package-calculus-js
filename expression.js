@@ -27,6 +27,12 @@ const LIMIT_GAP_FRAC              = 0.08;  // gap between ∫ sign and limit exp
 
 const LIMIT_SIZE = -4; // font-size delta for limit subexpressions
 
+const TYPE_EVAL_BAR     = 1;   // f(x) |_a^b
+const TYPE_EVAL_BRACKET = 2;   // [f(x)]_a^b
+
+const EVAL_GAP_FRAC   = 0.10;  // gap between expression and bar/bracket, as fraction of fontSize
+const EVAL_SERIF_FRAC = 0.25;  // bracket serif length as fraction of fontSize
+
 const CIRCLE_CX_FRAC       = 0.45;   // oval center as fraction of widthSymbol from sign left edge
 const CIRCLE_RADIUS_SINGLE = 0.30;   // r for dims=1, as fraction of widthSymbol
 const CIRCLE_RADIUS_MULTI  = 0.35;   // r for dims≥2, as fraction of widthSymbol
@@ -626,6 +632,7 @@ const TYPE_PARTIAL_LEIBNIZ_OPERATOR  = 2;
 CalculusPackage.styleTotal                 = TYPE_TOTAL_LEIBNIZ_OPERATOR;
 CalculusPackage.styleTotalWithoutVariables = TYPE_TOTAL_NOVAR_LAGRANGE;
 CalculusPackage.stylePartial               = TYPE_PARTIAL_LEIBNIZ_OPERATOR;
+CalculusPackage.styleEvaluationBar         = TYPE_EVAL_BAR;
 
 const LQ_FUNC_GAP_FRAC     = 0.10; // gap between d^n (or ∂^n) and the function in the quotient numerator, as fraction of fontSize
 const LO_FUNC_GAP_FRAC     = 0.20; // gap between the operator fraction and the function to its right, as fraction of fontSize
@@ -1055,7 +1062,7 @@ function prepareDisplaySubscript(expression, context) {
 			}
 			if (!isExp) { sub = ch; repeat = 1; }
 
-			sub.prepareDisplay(context);
+			ch.prepareDisplay(context);
 			subHorzBaseline = Math.max(subHorzBaseline, sub.horzBaseline);
 			subHeightBelow  = Math.max(subHeightBelow, sub.height - sub.horzBaseline);
 			for (let k = 0; k < repeat; k++) items.push(sub);
@@ -1386,6 +1393,141 @@ const PartialDerivative = class extends Expression {
 	}
 };
 
+// ─── Evaluation bar: f(x)|_a^b or [f(x)]_a^b ───────────────────────────────
+
+const EvaluationBar = class extends Expression {
+	getTag()               { return "Calculus.EvaluationBar"; }
+	getName()              { return CalculusPackage.messages.nameEvaluationBar; }
+	canHaveChildren(count) { return count === 3; }
+	getChildName(index)    { return CalculusPackage.messages.childrenEvaluationBar[index]; }
+
+	prepareDisplay(context) {
+		const fontSize  = context.fontInfo.size;
+		const barGap    = Math.round(fontSize * EVAL_GAP_FRAC);
+		const serifLen  = Math.round(fontSize * EVAL_SERIF_FRAC);
+		const barStroke = Math.max(1, Math.round(fontSize * 0.06));
+		const isBracket = CalculusPackage.styleEvaluationBar === TYPE_EVAL_BRACKET;
+
+		let ch0 = this.children[0]; // expression
+		let ch1 = this.children[1]; // lower bound
+		let ch2 = this.children[2]; // upper bound
+
+		ch0.prepareDisplay(context);
+
+		{
+			let bkp = context.fontInfo.size;
+			context.fontInfo.setSizeRelative(context, LIMIT_SIZE);
+			ch1.prepareDisplay(context);
+			ch2.prepareDisplay(context);
+			context.fontInfo.setSizeAbsolute(context, bkp);
+		}
+
+		// Bracket: room for left [ before the expression; bar: no left padding
+		const leftPad = isBracket ? serifLen + barGap : 0;
+		ch0.x = leftPad;
+		ch0.y = ch2.height;
+
+		// Right stroke x: for bracket the stroke is serifLen past the serif start
+		const rightStrokeX = ch0.x + ch0.width + barGap + (isBracket ? serifLen : 0);
+		const boundsX      = rightStrokeX + 2;
+
+		ch1.x = boundsX;
+		ch1.y = ch0.y + ch0.height;
+
+		ch2.x = boundsX;
+		ch2.y = 0;
+
+		this.ebBarStroke    = barStroke;
+		this.ebSerifLen     = serifLen;
+		this.ebIsBracket    = isBracket;
+		this.ebBarTop       = ch0.y;
+		this.ebBarBot       = ch0.y + ch0.height;
+		this.ebRightStrokeX = rightStrokeX;
+
+		this.horzBaseline = ch0.y + ch0.horzBaseline;
+		this.width        = boundsX + Math.max(ch1.width, ch2.width);
+		this.height       = ch2.height + ch0.height + ch1.height;
+		this.vertBaseline = Math.round(this.width / 2);
+	}
+
+	display(context, x, y) {
+		let ch0 = this.children[0];
+		ch0.display(context, x + ch0.x, y + ch0.y);
+
+		const barTop = y + this.ebBarTop;
+		const barBot = y + this.ebBarBot;
+
+		context.save();
+		context.lineWidth = this.ebBarStroke;
+
+		if (this.ebIsBracket) {
+			// Left bracket [: stroke at x, serifs extend right
+			context.beginPath();
+			context.moveTo(x + this.ebSerifLen, barTop);
+			context.lineTo(x,                   barTop);
+			context.lineTo(x,                   barBot);
+			context.lineTo(x + this.ebSerifLen, barBot);
+			context.stroke();
+
+			// Right bracket ]: stroke at rx, serifs extend left
+			const rx = x + this.ebRightStrokeX;
+			context.beginPath();
+			context.moveTo(rx - this.ebSerifLen, barTop);
+			context.lineTo(rx,                   barTop);
+			context.lineTo(rx,                   barBot);
+			context.lineTo(rx - this.ebSerifLen, barBot);
+			context.stroke();
+		} else {
+			// Vertical bar |
+			const bx = x + this.ebRightStrokeX;
+			context.beginPath();
+			context.moveTo(bx, barTop);
+			context.lineTo(bx, barBot);
+			context.stroke();
+		}
+
+		context.restore();
+
+		let bkp = context.fontInfo.size;
+		context.fontInfo.setSizeRelative(context, LIMIT_SIZE);
+
+		let ch1 = this.children[1];
+		ch1.display(context, x + ch1.x, y + ch1.y);
+
+		let ch2 = this.children[2];
+		ch2.display(context, x + ch2.x, y + ch2.y);
+
+		context.fontInfo.setSizeAbsolute(context, bkp);
+	}
+
+	moveTo(direction) {
+		switch (direction) {
+			case Expression.UP:       return this.children[2].moveTo(direction);
+			case Expression.DOWN:     return this.children[1].moveTo(direction);
+			case Expression.PREVIOUS: return this.children[1].moveTo(direction);
+			default:                  return this.children[0].moveTo(direction);
+		}
+	}
+
+	moveAcross(i, direction) {
+		switch (direction) {
+			case Expression.NEXT:
+				if (i === 0) return this.children[1].moveTo(direction);
+				break;
+			case Expression.PREVIOUS:
+				if (i === 1 || i === 2) return this.children[0].moveTo(direction);
+				break;
+			case Expression.UP:
+				if (i === 0 || i === 1) return this.children[2].moveTo(direction);
+				break;
+			case Expression.DOWN:
+				if (i === 0 || i === 2) return this.children[1].moveTo(direction);
+				break;
+		}
+		return this.moveOut(direction);
+	}
+};
+
 CalculusPackage.setExpressions = function(module) {
 	Formulae.setExpression(module, "Calculus.Integral.IndefiniteIntegral",         IndefiniteIntegral);
 	Formulae.setExpression(module, "Calculus.Integral.DefiniteIntegral",           DefiniteIntegral);
@@ -1398,6 +1540,8 @@ CalculusPackage.setExpressions = function(module) {
 	Formulae.setExpression(module, "Calculus.Differential.TotalDerivative",                 TotalDerivative);
 	Formulae.setExpression(module, "Calculus.Differential.TotalDerivativeWithoutVariables", TotalDerivativeNoVar);
 	Formulae.setExpression(module, "Calculus.Differential.PartialDerivative",               PartialDerivative);
+
+	Formulae.setExpression(module, "Calculus.EvaluationBar", EvaluationBar);
 };
 
 CalculusPackage.isConfigurable = () => true;
@@ -1490,6 +1634,30 @@ CalculusPackage.onConfiguration = () => {
 	
 	////////////////////////////////////////////////////////////
 	
+	////////////////////////////////////////////////////////////
+
+	row = table.insertRow();
+	th = document.createElement("th");
+	th.appendChild(document.createTextNode(CalculusPackage.messages.preferenceEvaluationBarTitle));
+	row.appendChild(th);
+
+	row = table.insertRow();
+	col = row.insertCell();
+
+	radio = document.createElement("input"); radio.type = "radio"; radio.name = "evalbar"; radio.value = TYPE_EVAL_BAR;
+	radio.checked = (radio.value == CalculusPackage.styleEvaluationBar);
+	col.appendChild(radio);
+	col.appendChild(document.createTextNode(CalculusPackage.messages.preferenceEvaluationBarBar));
+
+	col.appendChild(document.createElement("br"));
+
+	radio = document.createElement("input"); radio.type = "radio"; radio.name = "evalbar"; radio.value = TYPE_EVAL_BRACKET;
+	radio.checked = (radio.value == CalculusPackage.styleEvaluationBar);
+	col.appendChild(radio);
+	col.appendChild(document.createTextNode(CalculusPackage.messages.preferenceEvaluationBarBracket));
+
+	////////////////////////////////////////////////////////////
+
 	row = table.insertRow();
 	th = document.createElement("th");
 	const button = document.createElement("button");
@@ -1512,7 +1680,10 @@ CalculusPackage.onChangeStyle = function() {
 	
 	let partial = document.querySelector('input[name="partial"]:checked');
 	if (partial) CalculusPackage.stylePartial = parseInt(partial.value);
-	
+
+	let evalbar = document.querySelector('input[name="evalbar"]:checked');
+	if (evalbar) CalculusPackage.styleEvaluationBar = parseInt(evalbar.value);
+
 	Formulae.resetModal();
 	Formulae.refreshHandlers();
 };

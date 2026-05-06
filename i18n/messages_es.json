@@ -68,6 +68,14 @@
 	"preferencePartialLeibnizOperator" : "Operador diferencial de Leibniz (∂/∂x f)",
 
 	"editionDerivativeNoVarTitle"   : "Derivada",
-	"editionDerivativeNoVarOrder"   : "Orden"
+	"editionDerivativeNoVarOrder"   : "Orden",
+
+	"nameEvaluationBar"      : "Barra de evaluación",
+	"leafEvaluationBar"      : "Barra de evaluación",
+	"childrenEvaluationBar"  : [ "Expresión", "Límite inferior", "Límite superior" ],
+
+	"preferenceEvaluationBarTitle"   : "Barra de evaluación",
+	"preferenceEvaluationBarBar"     : "Barra vertical (f(x)|)",
+	"preferenceEvaluationBarBracket" : "Corchetes ([f(x)])"
 }
 
