@@ -16,7 +16,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-'use strict';
+"use strict";
 
 export class CalculusPackage extends Formulae.ExpressionPackage {};
 
@@ -93,20 +93,20 @@ const IndefiniteIntegral = class extends Expression {
 	getName()              { return CalculusPackage.messages.nameIndefiniteIntegral; }
 	canHaveChildren(count) { return count === 2; }
 	getChildName(index)    { return CalculusPackage.messages.childrenIndefiniteIntegral[index]; }
-
+	
 	prepareDisplay(context) {
 		this.heightSymbol = Math.floor(context.fontInfo.size * 3);
 		this.widthSymbol  = Math.round(this.heightSymbol * SIGN_SVG_W / SIGN_SVG_H);
 		let signGap = Math.round(this.widthSymbol * SIGN_GAP_FRAC);
 		let dGap    = Math.round(this.widthSymbol * D_GAP_FRAC);
-
+		
 		let ch0 = this.children[0]; // integrand
 		let ch1 = this.children[1]; // variable
 		ch0.prepareDisplay(context);
 		ch1.prepareDisplay(context);
-
+		
 		this.dWidth = Math.ceil(context.measureText("d").width);
-
+		
 		// Vertical: center the ∫ sign at horzBaseline; accommodate both children
 		this.horzBaseline = Math.max(
 			Math.floor(this.heightSymbol / 2),
@@ -118,20 +118,20 @@ const IndefiniteIntegral = class extends Expression {
 			ch0.height - ch0.horzBaseline,
 			ch1.height - ch1.horzBaseline
 		);
-
+		
 		// Horizontal: [∫] [signGap] [integrand] [dGap] [d] [variable]
 		ch0.x = this.widthSymbol + signGap;
 		ch0.y = this.horzBaseline - ch0.horzBaseline;
-
+		
 		this.dX = ch0.x + ch0.width + dGap;
-
+		
 		ch1.x = this.dX + this.dWidth;
 		ch1.y = this.horzBaseline - ch1.horzBaseline;
-
+		
 		this.width        = ch1.x + ch1.width;
 		this.vertBaseline = Math.floor(this.width / 2);
 	}
-
+	
 	display(context, x, y) {
 		drawIntegralSign(
 			context,
@@ -140,19 +140,19 @@ const IndefiniteIntegral = class extends Expression {
 			this.widthSymbol,
 			this.heightSymbol
 		);
-
+		
 		let ch0 = this.children[0];
 		ch0.display(context, x + ch0.x, y + ch0.y);
-
+		
 		let bkpItalic = context.fontInfo.italic;
 		context.fontInfo.setItalic(context, true);
 		super.drawText(context, "d", x + this.dX, y + this.horzBaseline + Math.round(context.fontInfo.size / 2));
 		context.fontInfo.setItalic(context, bkpItalic);
-
+		
 		let ch1 = this.children[1];
 		ch1.display(context, x + ch1.x, y + ch1.y);
 	}
-
+	
 	moveAcross(i, direction) {
 		if (direction === Expression.NEXT     && i === 0) return this.children[1].moveTo(direction);
 		if (direction === Expression.PREVIOUS && i === 1) return this.children[0].moveTo(direction);
@@ -173,22 +173,22 @@ const DefiniteIntegral = class extends Expression {
 	getName()               { return CalculusPackage.messages.nameDefiniteIntegral; }
 	canHaveChildren(count)  { return count === 4; }
 	getChildName(index)     { return CalculusPackage.messages.childrenDefiniteIntegral[index]; }
-
+	
 	prepareDisplay(context) {
 		this.heightSymbol = Math.floor(context.fontInfo.size * 3);
 		this.widthSymbol  = Math.round(this.heightSymbol * SIGN_SVG_W / SIGN_SVG_H);
 		let signGap  = Math.round(this.widthSymbol * SIGN_GAP_FRAC);
 		let dGap     = Math.round(this.widthSymbol * D_GAP_FRAC);
 		let limitGap = Math.round(this.widthSymbol * LIMIT_GAP_FRAC);
-
+		
 		let ch0 = this.children[0]; // integrand
 		let ch1 = this.children[1]; // variable
 		let ch2 = this.children[2]; // lower bound
 		let ch3 = this.children[3]; // upper bound
-
+		
 		ch0.prepareDisplay(context);
 		ch1.prepareDisplay(context);
-
+		
 		{
 			let bkp = context.fontInfo.size;
 			context.fontInfo.setSizeRelative(context, LIMIT_SIZE);
@@ -196,16 +196,16 @@ const DefiniteIntegral = class extends Expression {
 			ch3.prepareDisplay(context);
 			context.fontInfo.setSizeAbsolute(context, bkp);
 		}
-
+		
 		this.dWidth = Math.ceil(context.measureText("d").width);
-
+		
 		// Sign column is wide enough to center the sign, lower, and upper
 		this.widthSignColumn = Math.max(this.widthSymbol, ch2.width, ch3.width);
 		this.symbolX = Math.floor((this.widthSignColumn - this.widthSymbol) / 2);
-
+		
 		let spaceTop    = ch3.height + limitGap;
 		let spaceBottom = ch2.height + limitGap;
-
+		
 		// Vertical: sign center at horzBaseline; must leave room for upper bound above
 		this.horzBaseline = Math.max(
 			spaceTop + Math.floor(this.heightSymbol / 2),
@@ -213,23 +213,23 @@ const DefiniteIntegral = class extends Expression {
 			ch1.horzBaseline
 		);
 		this.symbolY = this.horzBaseline - Math.floor(this.heightSymbol / 2);
-
+		
 		// Limits centered within sign column, tight against sign top/bottom
 		ch3.x = Math.floor((this.widthSignColumn - ch3.width) / 2);
 		ch3.y = this.symbolY - limitGap - ch3.height;
-
+		
 		ch2.x = Math.floor((this.widthSignColumn - ch2.width) / 2);
 		ch2.y = this.symbolY + this.heightSymbol + limitGap;
-
+		
 		// Integrand and variable to the right of the sign column
 		ch0.x = this.widthSignColumn + signGap;
 		ch0.y = this.horzBaseline - ch0.horzBaseline;
-
+		
 		this.dX = ch0.x + ch0.width + dGap;
-
+		
 		ch1.x = this.dX + this.dWidth;
 		ch1.y = this.horzBaseline - ch1.horzBaseline;
-
+		
 		this.width        = ch1.x + ch1.width;
 		this.height = this.horzBaseline + Math.max(
 			Math.ceil(this.heightSymbol / 2) + spaceBottom,
@@ -238,7 +238,7 @@ const DefiniteIntegral = class extends Expression {
 		);
 		this.vertBaseline = Math.floor(this.width / 2);
 	}
-
+	
 	display(context, x, y) {
 		drawIntegralSign(
 			context,
@@ -247,30 +247,30 @@ const DefiniteIntegral = class extends Expression {
 			this.widthSymbol,
 			this.heightSymbol
 		);
-
+		
 		let ch0 = this.children[0];
 		ch0.display(context, x + ch0.x, y + ch0.y);
-
+		
 		let bkpItalic = context.fontInfo.italic;
 		context.fontInfo.setItalic(context, true);
 		super.drawText(context, "d", x + this.dX, y + this.horzBaseline + Math.round(context.fontInfo.size / 2));
 		context.fontInfo.setItalic(context, bkpItalic);
-
+		
 		let ch1 = this.children[1];
 		ch1.display(context, x + ch1.x, y + ch1.y);
-
+		
 		let bkpSize = context.fontInfo.size;
 		context.fontInfo.setSizeRelative(context, LIMIT_SIZE);
-
+		
 		let ch2 = this.children[2];
 		ch2.display(context, x + ch2.x, y + ch2.y);
-
+		
 		let ch3 = this.children[3];
 		ch3.display(context, x + ch3.x, y + ch3.y);
-
+		
 		context.fontInfo.setSizeAbsolute(context, bkpSize);
 	}
-
+	
 	moveAcross(i, direction) {
 		switch (direction) {
 			case Expression.NEXT:
@@ -315,14 +315,14 @@ const DefiniteIntegralOverDomain = class extends Expression {
 	getName()               { return CalculusPackage.messages.nameDefiniteIntegralOverDomain; }
 	canHaveChildren(count)  { return count === 3; }
 	getChildName(index)     { return CalculusPackage.messages.childrenDefiniteIntegralOverDomain[index]; }
-
+	
 	getSerializationNames() { return [ "Dimensions", "ClosedDomain" ]; }
 	async getSerializationStrings() { return [ String(this.dimensions), this.closedDomain ? "True" : "False" ]; }
 	setSerializationStrings(strings, promises) { this.dimensions = parseInt(strings[0]); this.closedDomain = strings[1] === "True"; }
-
+	
 	prepareDisplay(context) {
 		let dims = this.dimensions || 1;
-
+		
 		this.heightSymbol  = Math.floor(context.fontInfo.size * 3);
 		this.widthSymbol   = Math.round(this.heightSymbol * SIGN_SVG_W / SIGN_SVG_H);
 		this.signStep      = Math.round(this.widthSymbol * MULTI_SIGN_STEP);
@@ -330,47 +330,47 @@ const DefiniteIntegralOverDomain = class extends Expression {
 		let signGap  = Math.round(this.widthSymbol * (this.closedDomain ? SIGN_GAP_FRAC_CLOSED_DOMAIN : SIGN_GAP_FRAC));
 		let dGap     = Math.round(this.widthSymbol * D_GAP_FRAC);
 		let limitGap = Math.round(this.widthSymbol * LIMIT_GAP_FRAC);
-
+		
 		let ch0 = this.children[0]; // integrand
 		let ch1 = this.children[1]; // domain
 		let ch2 = this.children[2]; // differential element
-
+		
 		ch0.prepareDisplay(context);
 		ch2.prepareDisplay(context);
-
+		
 		this.dWidth = Math.ceil(context.measureText("d").width);
-
+		
 		{
 			let bkp = context.fontInfo.size;
 			context.fontInfo.setSizeRelative(context, LIMIT_SIZE);
 			ch1.prepareDisplay(context);
 			context.fontInfo.setSizeAbsolute(context, bkp);
 		}
-
+		
 		// Sign column: wide enough for sign group and domain label
 		this.widthSignColumn = Math.max(this.signGroupWidth, ch1.width);
 		this.symbolGroupX    = Math.floor((this.widthSignColumn - this.signGroupWidth) / 2);
-
+		
 		let spaceBottom = ch1.height + limitGap;
-
+		
 		this.horzBaseline = Math.max(
 			Math.floor(this.heightSymbol / 2),
 			ch0.horzBaseline,
 			ch2.horzBaseline
 		);
 		this.symbolY = this.horzBaseline - Math.floor(this.heightSymbol / 2);
-
+		
 		ch1.x = Math.floor((this.widthSignColumn - ch1.width) / 2);
 		ch1.y = this.symbolY + this.heightSymbol + limitGap;
-
+		
 		ch0.x = this.widthSignColumn + signGap;
 		ch0.y = this.horzBaseline - ch0.horzBaseline;
-
+		
 		this.dX = ch0.x + ch0.width + dGap;
-
+		
 		ch2.x = this.dX + this.dWidth;
 		ch2.y = this.horzBaseline - ch2.horzBaseline;
-
+		
 		this.width        = ch2.x + ch2.width;
 		this.height       = this.horzBaseline + Math.max(
 			Math.ceil(this.heightSymbol / 2) + spaceBottom,
@@ -379,7 +379,7 @@ const DefiniteIntegralOverDomain = class extends Expression {
 		);
 		this.vertBaseline = Math.floor(this.width / 2);
 	}
-
+	
 	display(context, x, y) {
 		let dims = this.dimensions || 1;
 		for (let i = 0; i < dims; i++) {
@@ -391,7 +391,7 @@ const DefiniteIntegralOverDomain = class extends Expression {
 				this.heightSymbol
 			);
 		}
-
+		
 		if (this.closedDomain) {
 			let rFrac = dims === 1 ? CIRCLE_RADIUS_SINGLE : CIRCLE_RADIUS_MULTI;
 			let r     = Math.round(this.widthSymbol * rFrac);
@@ -405,25 +405,25 @@ const DefiniteIntegralOverDomain = class extends Expression {
 				Math.max(1, Math.round(this.widthSymbol * CIRCLE_STROKE_WIDTH))
 			);
 		}
-
+		
 		let bkpSize = context.fontInfo.size;
 		context.fontInfo.setSizeRelative(context, LIMIT_SIZE);
 		let ch1 = this.children[1];
 		ch1.display(context, x + ch1.x, y + ch1.y);
 		context.fontInfo.setSizeAbsolute(context, bkpSize);
-
+		
 		let ch0 = this.children[0];
 		ch0.display(context, x + ch0.x, y + ch0.y);
-
+		
 		let bkpItalic = context.fontInfo.italic;
 		context.fontInfo.setItalic(context, true);
 		super.drawText(context, "d", x + this.dX, y + this.horzBaseline + Math.round(context.fontInfo.size / 2));
 		context.fontInfo.setItalic(context, bkpItalic);
-
+		
 		let ch2 = this.children[2];
 		ch2.display(context, x + ch2.x, y + ch2.y);
 	}
-
+	
 	moveAcross(i, direction) {
 		switch (direction) {
 			case Expression.NEXT:
@@ -465,26 +465,26 @@ const LimitBase = class extends Expression {
 	getWord()              { return "lim"; }
 	canHaveChildren(count) { return count === 3; }
 	getChildName(index)    { return CalculusPackage.messages.childrenLimit[index]; }
-
+	
 	getSerializationNames()         { return [ "ApproachDirection" ]; }
 	async getSerializationStrings() { return [ this.approachDirection || "Both" ]; }
 	setSerializationStrings(strings, promises) {
 		this.approachDirection = strings[0] || "Both";
 	}
-
+	
 	prepareDisplay(context) {
 		let dir = this.approachDirection || "Both";
 		this.approachChar = dir === "Left" ? "⁻" : dir === "Right" ? "⁺" : "";
-
+		
 		let ch0 = this.children[0]; // expression
 		let ch1 = this.children[1]; // variable
 		let ch2 = this.children[2]; // limit point
-
+		
 		ch0.prepareDisplay(context);
-
+		
 		let fontSize = context.fontInfo.size;
 		this.wordWidth = Math.ceil(context.measureText(this.getWord()).width);
-
+		
 		let subArrowWidth, subApproachWidth, subBaseline;
 		{
 			let bkp = context.fontInfo.size;
@@ -497,39 +497,39 @@ const LimitBase = class extends Expression {
 			subBaseline = Math.max(ch1.horzBaseline, ch2.horzBaseline);
 			context.fontInfo.setSizeAbsolute(context, bkp);
 		}
-
+		
 		this.subArrowWidth = subArrowWidth;
 		this.subBaseline   = subBaseline;
-
+		
 		let subWidth = ch1.width + subArrowWidth + ch2.width + subApproachWidth;
-
+		
 		// Sign column: wide enough to hold both the word and the subscript
 		this.signColumnWidth = Math.max(this.wordWidth, subWidth);
 		this.wordX           = Math.floor((this.signColumnWidth - this.wordWidth) / 2);
 		let subLeft          = Math.floor((this.signColumnWidth - subWidth) / 2);
-
+		
 		let wordGap = Math.round(fontSize * WORD_GAP_FRAC);
 		let exprGap = Math.round(fontSize * EXPR_GAP_FRAC);
-
+		
 		// Vertical: word baseline at horzBaseline; subscript hangs below
 		this.horzBaseline = Math.max(Math.floor(fontSize / 2), ch0.horzBaseline);
 		this.subY         = this.horzBaseline + Math.ceil(fontSize / 2) + wordGap;
-
+		
 		// Subscript children (baseline-aligned within subscript area)
 		ch1.x = subLeft;
 		ch1.y = this.subY + (subBaseline - ch1.horzBaseline);
-
+		
 		this.arrowX = subLeft + ch1.width;
-
+		
 		ch2.x = this.arrowX + subArrowWidth;
 		ch2.y = this.subY + (subBaseline - ch2.horzBaseline);
-
+		
 		this.approachCharX = ch2.x + ch2.width;
-
+		
 		// Expression to the right of the sign column
 		ch0.x = this.signColumnWidth + exprGap;
 		ch0.y = this.horzBaseline - ch0.horzBaseline;
-
+		
 		let subHeight = subBaseline + Math.max(
 			ch1.height - ch1.horzBaseline,
 			ch2.height - ch2.horzBaseline
@@ -541,43 +541,43 @@ const LimitBase = class extends Expression {
 		);
 		this.vertBaseline = Math.floor(this.width / 2);
 	}
-
+	
 	display(context, x, y) {
 		super.drawText(context, this.getWord(),
 			x + this.wordX,
 			y + this.horzBaseline + Math.round(context.fontInfo.size / 2)
 		);
-
+		
 		let bkpSize = context.fontInfo.size;
 		context.fontInfo.setSizeRelative(context, LIMIT_SIZE);
-
+		
 		let subTextY = y + this.subY + this.subBaseline + Math.round(context.fontInfo.size / 2);
-
+		
 		let ch1 = this.children[1]; // variable
 		ch1.display(context, x + ch1.x, y + ch1.y);
-
+		
 		super.drawText(context, "→", x + this.arrowX, subTextY);
-
+		
 		let ch2 = this.children[2]; // limit point
 		ch2.display(context, x + ch2.x, y + ch2.y);
-
+		
 		if (this.approachChar) {
 			super.drawText(context, this.approachChar, x + this.approachCharX, subTextY);
 		}
-
+		
 		context.fontInfo.setSizeAbsolute(context, bkpSize);
-
+		
 		let ch0 = this.children[0]; // expression
 		ch0.display(context, x + ch0.x, y + ch0.y);
 	}
-
+	
 	moveTo(direction) {
 		// PREVIOUS enters from right → expression (rightmost); all others → variable (leftmost)
 		return (direction === Expression.PREVIOUS)
 			? this.children[0].moveTo(direction)
 			: this.children[1].moveTo(direction);
 	}
-
+	
 	moveAcross(i, direction) {
 		switch (direction) {
 			case Expression.NEXT:
@@ -649,7 +649,8 @@ function derivativeOrder(expression) {
 		) {
 			let n = parseInt(ch.children[1].get("Value"));
 			total += (Number.isInteger(n) && n >= 2) ? n : 1;
-		} else {
+		}
+		else {
 			total += 1;
 		}
 	}
@@ -662,7 +663,7 @@ function prepareDisplayLeibnizQuotient(expression, context, total) {
 	const sym             = total ? "d" : "∂";
 	const order           = derivativeOrder(expression);
 	const symWidth        = Math.ceil(context.measureText(sym).width);
-
+	
 	let ordWidth = 0, ordHorzBaseline = 0;
 	if (order > 1) {
 		let bkp = context.fontInfo.size;
@@ -671,13 +672,13 @@ function prepareDisplayLeibnizQuotient(expression, context, total) {
 		ordHorzBaseline = Math.round(context.fontInfo.size / 2);
 		context.fontInfo.setSizeAbsolute(context, bkp);
 	}
-
+	
 	let ch0 = expression.children[0];
 	ch0.prepareDisplay(context);
 	for (let i = 1; i < expression.children.length; i++) {
 		expression.children[i].prepareDisplay(context);
 	}
-
+	
 	// Numerator: [sym^order] [ch0], aligned at horzBaseline
 	// d^n block uses Superscript layout; ordHorzBaseline=0 when order≤1 so formula is uniform
 	const dnHorzBaseline  = ordHorzBaseline + symHorzBaseline;
@@ -688,7 +689,7 @@ function prepareDisplayLeibnizQuotient(expression, context, total) {
 	);
 	const funcGap  = Math.round(fontSize * LQ_FUNC_GAP_FRAC);
 	const numWidth = symWidth + ordWidth + funcGap + ch0.width;
-
+	
 	// Denominator: [sym var₁] [gap] [sym var₂] …
 	const denGap = Math.round(fontSize * LEIBNIZ_DEN_GAP_FRAC);
 	let denHorzBaseline = symHorzBaseline;
@@ -702,18 +703,18 @@ function prepareDisplayLeibnizQuotient(expression, context, total) {
 		denHeightBelow   = Math.max(denHeightBelow, ch.height - ch.horzBaseline);
 	}
 	const denHeight = denHorzBaseline + denHeightBelow;
-
+	
 	// Fraction (Division class pattern)
 	const fracWidth        = 3 + Math.max(numWidth, denWidth) + 3;
 	const fracVertBaseline = Math.round(fracWidth / 2);
 	const numX             = fracVertBaseline - Math.round(numWidth / 2);
 	const denX             = fracVertBaseline - Math.round(denWidth / 2);
 	const denY             = numHeight + 3;
-
+	
 	// Child positions (numY = 0)
 	ch0.x = numX + symWidth + ordWidth + funcGap;
 	ch0.y = numHorzBaseline - ch0.horzBaseline;
-
+	
 	let curX = 0;
 	for (let i = 1; i < expression.children.length; i++) {
 		let ch = expression.children[i];
@@ -722,7 +723,7 @@ function prepareDisplayLeibnizQuotient(expression, context, total) {
 		ch.y = denY + denHorzBaseline - ch.horzBaseline;
 		curX += symWidth + ch.width;
 	}
-
+	
 	// Display data
 	expression.lqSym         = sym;
 	expression.lqOrder       = order;
@@ -740,7 +741,7 @@ function prepareDisplayLeibnizQuotient(expression, context, total) {
 		expression.lqDenSymXs.push(denX + curX);
 		curX += symWidth + expression.children[i].width;
 	}
-
+	
 	expression.width        = fracWidth;
 	expression.height       = numHeight + 3 + denHeight;
 	expression.horzBaseline = numHeight + 2;
@@ -753,7 +754,7 @@ function displayLeibnizQuotient(expression, context, x, y, total) {
 	context.moveTo(x,                    y - 0.5 + expression.horzBaseline);
 	context.lineTo(x + expression.width, y - 0.5 + expression.horzBaseline);
 	context.stroke();
-
+	
 	// Numerator sym (italic d or ∂)
 	let bkpItalic = context.fontInfo.italic;
 	context.fontInfo.setItalic(context, true);
@@ -762,7 +763,7 @@ function displayLeibnizQuotient(expression, context, x, y, total) {
 		y + expression.lqNumSymTextY
 	);
 	context.fontInfo.setItalic(context, bkpItalic);
-
+	
 	// Order superscript
 	if (expression.lqOrder > 1) {
 		let bkp = context.fontInfo.size;
@@ -773,11 +774,11 @@ function displayLeibnizQuotient(expression, context, x, y, total) {
 		);
 		context.fontInfo.setSizeAbsolute(context, bkp);
 	}
-
+	
 	// Function child
 	let ch0 = expression.children[0];
 	ch0.display(context, x + ch0.x, y + ch0.y);
-
+	
 	// Denominator: italic sym then variable child, for each variable
 	for (let i = 1; i < expression.children.length; i++) {
 		bkpItalic = context.fontInfo.italic;
@@ -787,7 +788,7 @@ function displayLeibnizQuotient(expression, context, x, y, total) {
 			y + expression.lqDenSymTextY
 		);
 		context.fontInfo.setItalic(context, bkpItalic);
-
+		
 		let ch = expression.children[i];
 		ch.display(context, x + ch.x, y + ch.y);
 	}
@@ -799,7 +800,7 @@ function prepareDisplayLeibnizOperator(expression, context, total) {
 	const sym             = total ? "d" : "∂";
 	const order           = derivativeOrder(expression);
 	const symWidth        = Math.ceil(context.measureText(sym).width);
-
+	
 	let ordWidth = 0, ordHorzBaseline = 0;
 	if (order > 1) {
 		let bkp = context.fontInfo.size;
@@ -808,19 +809,19 @@ function prepareDisplayLeibnizOperator(expression, context, total) {
 		ordHorzBaseline = Math.round(context.fontInfo.size / 2);
 		context.fontInfo.setSizeAbsolute(context, bkp);
 	}
-
+	
 	let ch0 = expression.children[0];
 	ch0.prepareDisplay(context);
 	for (let i = 1; i < expression.children.length; i++) {
 		expression.children[i].prepareDisplay(context);
 	}
-
+	
 	// Numerator: d^n only (no function)
 	const dnHorzBaseline  = ordHorzBaseline + symHorzBaseline;
 	const numHorzBaseline = dnHorzBaseline;
 	const numHeight       = numHorzBaseline + (fontSize - symHorzBaseline);
 	const numWidth        = symWidth + ordWidth;
-
+	
 	// Denominator: [sym var₁] [gap] [sym var₂] …
 	const denGap = Math.round(fontSize * LEIBNIZ_DEN_GAP_FRAC);
 	let denHorzBaseline = symHorzBaseline;
@@ -834,7 +835,7 @@ function prepareDisplayLeibnizOperator(expression, context, total) {
 		denHeightBelow   = Math.max(denHeightBelow, ch.height - ch.horzBaseline);
 	}
 	const denHeight = denHorzBaseline + denHeightBelow;
-
+	
 	// Fraction (Division class pattern)
 	const fracWidth        = 3 + Math.max(numWidth, denWidth) + 3;
 	const fracVertBaseline = Math.round(fracWidth / 2);
@@ -843,12 +844,12 @@ function prepareDisplayLeibnizOperator(expression, context, total) {
 	const denY             = numHeight + 3;
 	const fracHorzBaseline = numHeight + 2;
 	const fracHeight       = numHeight + 3 + denHeight;
-
+	
 	// Function to the right of the fraction
 	const operatorGap = Math.round(fontSize * LO_FUNC_GAP_FRAC);
 	ch0.x = fracWidth + operatorGap;
 	ch0.y = fracHorzBaseline - ch0.horzBaseline;
-
+	
 	// Variable children in denominator
 	let curX = 0;
 	for (let i = 1; i < expression.children.length; i++) {
@@ -858,7 +859,7 @@ function prepareDisplayLeibnizOperator(expression, context, total) {
 		ch.y = denY + denHorzBaseline - ch.horzBaseline;
 		curX += symWidth + ch.width;
 	}
-
+	
 	// Display data
 	expression.loSym         = sym;
 	expression.loOrder       = order;
@@ -877,7 +878,7 @@ function prepareDisplayLeibnizOperator(expression, context, total) {
 		expression.loDenSymXs.push(denX + curX);
 		curX += symWidth + expression.children[i].width;
 	}
-
+	
 	expression.width        = fracWidth + operatorGap + ch0.width;
 	expression.horzBaseline = fracHorzBaseline;
 	expression.height       = Math.max(fracHeight, fracHorzBaseline + (ch0.height - ch0.horzBaseline));
@@ -890,7 +891,7 @@ function displayLeibnizOperator(expression, context, x, y, total) {
 	context.moveTo(x,                          y - 0.5 + expression.horzBaseline);
 	context.lineTo(x + expression.loFracWidth, y - 0.5 + expression.horzBaseline);
 	context.stroke();
-
+	
 	// Numerator sym (italic d or ∂)
 	let bkpItalic = context.fontInfo.italic;
 	context.fontInfo.setItalic(context, true);
@@ -899,7 +900,7 @@ function displayLeibnizOperator(expression, context, x, y, total) {
 		y + expression.loNumSymTextY
 	);
 	context.fontInfo.setItalic(context, bkpItalic);
-
+	
 	// Order superscript
 	if (expression.loOrder > 1) {
 		let bkp = context.fontInfo.size;
@@ -910,7 +911,7 @@ function displayLeibnizOperator(expression, context, x, y, total) {
 		);
 		context.fontInfo.setSizeAbsolute(context, bkp);
 	}
-
+	
 	// Denominator: italic sym + variable child, for each variable
 	for (let i = 1; i < expression.children.length; i++) {
 		bkpItalic = context.fontInfo.italic;
@@ -920,11 +921,11 @@ function displayLeibnizOperator(expression, context, x, y, total) {
 			y + expression.loDenSymTextY
 		);
 		context.fontInfo.setItalic(context, bkpItalic);
-
+		
 		let ch = expression.children[i];
 		ch.display(context, x + ch.x, y + ch.y);
 	}
-
+	
 	// Function to the right of the fraction
 	let ch0 = expression.children[0];
 	ch0.display(context, x + ch0.x, y + ch0.y);
@@ -935,7 +936,7 @@ function prepareDisplayEuler(expression, context) {
 	const dHorzBaseline = Math.round(fontSize / 2);
 	const dWidth        = Math.ceil(context.measureText("D").width);
 	const order         = derivativeOrder(expression);
-
+	
 	let ordWidth = 0, ordHorzBaseline_sm = 0, smallFontSize = 0;
 	if (order > 1) {
 		let bkp = context.fontInfo.size;
@@ -945,10 +946,10 @@ function prepareDisplayEuler(expression, context) {
 		ordHorzBaseline_sm = Math.round(smallFontSize / 2);
 		context.fontInfo.setSizeAbsolute(context, bkp);
 	}
-
+	
 	let ch0 = expression.children[0];
 	ch0.prepareDisplay(context);
-
+	
 	let subWidth = 0, subHorzBaseline = 0, subHeightBelow = 0;
 	{
 		let bkp = context.fontInfo.size;
@@ -964,21 +965,21 @@ function prepareDisplayEuler(expression, context) {
 		}
 		context.fontInfo.setSizeAbsolute(context, bkp);
 	}
-
+	
 	// ordHorzBaseline_sm = 0 when order ≤ 1, so this formula is uniform
 	const signHorzBaseline  = ordHorzBaseline_sm + dHorzBaseline;
 	const exprGap           = Math.round(fontSize * EXPR_GAP_FRAC);
 	expression.horzBaseline = Math.max(signHorzBaseline, ch0.horzBaseline);
 	const signOffset        = expression.horzBaseline - signHorzBaseline;
-
+	
 	// Subscript y: standard Subscript-class formula (sub center at D's bottom)
 	const subY = expression.horzBaseline - dHorzBaseline + fontSize - subHorzBaseline;
-
+	
 	// child positions
 	const signColumnWidth = dWidth + Math.max(ordWidth, subWidth);
 	ch0.x = signColumnWidth + exprGap;
 	ch0.y = expression.horzBaseline - ch0.horzBaseline;
-
+	
 	let curSubX = dWidth;
 	for (let i = 1; i < expression.children.length; i++) {
 		let ch = expression.children[i];
@@ -986,13 +987,13 @@ function prepareDisplayEuler(expression, context) {
 		ch.y = subY + (subHorzBaseline - ch.horzBaseline);
 		curSubX += ch.width;
 	}
-
+	
 	// display data
 	expression.euOrder    = order;
 	expression.euDTextY   = expression.horzBaseline + Math.round(fontSize / 2);
 	expression.euOrdX     = dWidth;
 	expression.euOrdTextY = signOffset + ordHorzBaseline_sm + Math.round(smallFontSize / 2);
-
+	
 	expression.width        = ch0.x + ch0.width;
 	expression.height       = Math.max(
 		expression.horzBaseline - dHorzBaseline + fontSize + subHeightBelow,
@@ -1004,11 +1005,11 @@ function prepareDisplayEuler(expression, context) {
 function displayEuler(expression, context, x, y) {
 	// D (capital, upright — no italic override)
 	expression.drawText(context, "D", x, y + expression.euDTextY);
-
+	
 	// Superscript order + subscript variable children, both at LIMIT_SIZE
 	let bkp = context.fontInfo.size;
 	context.fontInfo.setSizeRelative(context, LIMIT_SIZE);
-
+	
 	if (expression.euOrder > 1) {
 		expression.drawText(context, String(expression.euOrder),
 			x + expression.euOrdX,
@@ -1019,9 +1020,9 @@ function displayEuler(expression, context, x, y) {
 		let ch = expression.children[i];
 		ch.display(context, x + ch.x, y + ch.y);
 	}
-
+	
 	context.fontInfo.setSizeAbsolute(context, bkp);
-
+	
 	// Function child at full font size
 	let ch0 = expression.children[0];
 	ch0.display(context, x + ch0.x, y + ch0.y);
@@ -1030,19 +1031,19 @@ function displayEuler(expression, context, x, y) {
 function prepareDisplaySubscript(expression, context) {
 	let ch0 = expression.children[0];
 	ch0.prepareDisplay(context);
-
+	
 	const parens = ch0.parenthesesAsOperator() || ch0.parenthesesWhenSuperSubscripted();
 	ch0.x = parens ? 4 : 0;
 	ch0.y = 0;
-
+	
 	const subStartX = ch0.x + ch0.width + (parens ? 4 : 0) + 2;
-
+	
 	const items = [];
 	let subHorzBaseline = 0, subHeightBelow = 0;
 	{
 		let bkp = context.fontInfo.size;
 		context.fontInfo.setSizeRelative(context, LIMIT_SIZE);
-
+		
 		for (let i = 1; i < expression.children.length; i++) {
 			let ch = expression.children[i];
 			let sub, repeat;
@@ -1056,32 +1057,34 @@ function prepareDisplaySubscript(expression, context) {
 				if (Number.isInteger(n) && n >= 2) {
 					sub = ch.children[0];
 					repeat = n;
-				} else {
+				}
+				else {
 					isExp = false;
 				}
 			}
 			if (!isExp) { sub = ch; repeat = 1; }
-
+			
 			ch.prepareDisplay(context);
 			subHorzBaseline = Math.max(subHorzBaseline, sub.horzBaseline);
 			subHeightBelow  = Math.max(subHeightBelow, sub.height - sub.horzBaseline);
 			for (let k = 0; k < repeat; k++) items.push(sub);
 		}
-
+		
 		context.fontInfo.setSizeAbsolute(context, bkp);
 	}
-
-	const subY = (ch0.height >= subHorzBaseline)
-		? ch0.height - subHorzBaseline
-		: ch0.horzBaseline;
-
+	
+	const subY = (ch0.height >= subHorzBaseline) ?
+		ch0.height - subHorzBaseline :
+		ch0.horzBaseline
+	;
+	
 	let curX = 0;
 	const sbItems = items.map(sub => {
 		const pos = { expr: sub, xOffset: subStartX + curX, yOffset: subY + (subHorzBaseline - sub.horzBaseline) };
 		curX += sub.width;
 		return pos;
 	});
-
+	
 	expression.sbParens     = parens;
 	expression.sbItems      = sbItems;
 	expression.width        = subStartX + curX;
@@ -1092,19 +1095,19 @@ function prepareDisplaySubscript(expression, context) {
 
 function displaySubscript(expression, context, x, y) {
 	let ch0 = expression.children[0];
-
+	
 	if (expression.sbParens) {
 		ch0.drawParenthesesAround(context, x + ch0.x, y + ch0.y);
 	}
 	ch0.display(context, x + ch0.x, y + ch0.y);
-
+	
 	let bkp = context.fontInfo.size;
 	context.fontInfo.setSizeRelative(context, LIMIT_SIZE);
-
+	
 	for (const { expr, xOffset, yOffset } of expression.sbItems) {
 		expr.display(context, x + xOffset, y + yOffset);
 	}
-
+	
 	context.fontInfo.setSizeAbsolute(context, bkp);
 }
 
@@ -1112,7 +1115,7 @@ function prepareDisplayLagrange(expression, context) {
 	const order = expression.order;
 	let ch0 = expression.children[0];
 	ch0.prepareDisplay(context);
-
+	
 	if (order === 0) {
 		ch0.x = ch0.y = 0;
 		expression.width        = ch0.width;
@@ -1123,9 +1126,9 @@ function prepareDisplayLagrange(expression, context) {
 		expression.lgParens     = false;
 		return;
 	}
-
+	
 	const mark = order === 1 ? "′" : order === 2 ? "″" : order === 3 ? "‴" : "(" + order + ")";
-
+	
 	let markWidth, smallFontSize;
 	{
 		let bkp = context.fontInfo.size;
@@ -1134,20 +1137,20 @@ function prepareDisplayLagrange(expression, context) {
 		markWidth = Math.ceil(context.measureText(mark).width);
 		context.fontInfo.setSizeAbsolute(context, bkp);
 	}
-
+	
 	const markHorzBaseline = Math.round(smallFontSize / 2);
 	const parens = ch0.parenthesesAsOperator() || ch0.parenthesesWhenSuperSubscripted();
-
+	
 	ch0.x = parens ? 4 : 0;
 	ch0.y = markHorzBaseline;
-
+	
 	const markX = ch0.x + ch0.width + (parens ? 4 : 0) + 2;
-
+	
 	expression.width        = markX + markWidth;
 	expression.height       = markHorzBaseline + ch0.height;
 	expression.horzBaseline = markHorzBaseline + ch0.horzBaseline;
 	expression.vertBaseline = ch0.x + ch0.vertBaseline;
-
+	
 	expression.lgMark      = mark;
 	expression.lgMarkX     = markX;
 	expression.lgMarkTextY = markHorzBaseline + Math.round(smallFontSize / 2);
@@ -1156,12 +1159,12 @@ function prepareDisplayLagrange(expression, context) {
 
 function displayLagrange(expression, context, x, y) {
 	let ch0 = expression.children[0];
-
+	
 	if (expression.lgParens) {
 		ch0.drawParenthesesAround(context, x + ch0.x, y + ch0.y);
 	}
 	ch0.display(context, x + ch0.x, y + ch0.y);
-
+	
 	if (expression.lgMark !== "") {
 		let bkp = context.fontInfo.size;
 		context.fontInfo.setSizeRelative(context, LIMIT_SIZE);
@@ -1172,40 +1175,40 @@ function displayLagrange(expression, context, x, y) {
 
 function prepareDisplayNewton(expression, context) {
 	const order = expression.order;
-
+	
 	if (order === 0 || order >= 4) {
 		prepareDisplayLagrange(expression, context);
 		expression.ntMode = "mark";
 		return;
 	}
-
+	
 	expression.ntMode = "dots";
-
+	
 	const fontSize   = context.fontInfo.size;
 	const dotRadius  = Math.max(1, Math.round(fontSize * 0.08));
 	const dotSpacing = 2 * dotRadius + 2;
-
+	
 	let ch0 = expression.children[0];
 	ch0.prepareDisplay(context);
-
+	
 	const parens    = ch0.parenthesesAsOperator() || ch0.parenthesesWhenSuperSubscripted();
 	const bodyWidth = ch0.width + (parens ? 8 : 0);
 	const dotClusterWidth = (order - 1) * dotSpacing + 2 * dotRadius;
 	const expressionWidth = Math.max(bodyWidth, dotClusterWidth);
 	const midX      = Math.round(expressionWidth / 2);
-
+	
 	ch0.x = Math.round((expressionWidth - bodyWidth) / 2) + (parens ? 4 : 0);
 	ch0.y = 2 * dotRadius + 2;
-
+	
 	const ntDotCenters = [];
 	const startX = midX - Math.floor((order - 1) * dotSpacing / 2);
 	for (let i = 0; i < order; i++) ntDotCenters.push(startX + i * dotSpacing);
-
+	
 	expression.width        = expressionWidth;
 	expression.height       = ch0.y + ch0.height;
 	expression.horzBaseline = ch0.y + ch0.horzBaseline;
 	expression.vertBaseline = ch0.x + ch0.vertBaseline;
-
+	
 	expression.ntDotRadius  = dotRadius;
 	expression.ntDotCenterY = dotRadius + 1;
 	expression.ntDotCenters = ntDotCenters;
@@ -1217,14 +1220,14 @@ function displayNewton(expression, context, x, y) {
 		displayLagrange(expression, context, x, y);
 		return;
 	}
-
+	
 	let ch0 = expression.children[0];
-
+	
 	if (expression.ntParens) {
 		ch0.drawParenthesesAround(context, x + ch0.x, y + ch0.y);
 	}
 	ch0.display(context, x + ch0.x, y + ch0.y);
-
+	
 	const dotY = y + expression.ntDotCenterY;
 	for (const dotX of expression.ntDotCenters) {
 		context.beginPath();
@@ -1269,15 +1272,15 @@ const TotalDerivative = class extends Expression {
 			case TYPE_TOTAL_LEIBNIZ_QUOTIENT:
 				displayLeibnizQuotient(this, context, x, y, true);
 				break;
-
+			
 			case TYPE_TOTAL_LEIBNIZ_OPERATOR:
 				displayLeibnizOperator(this, context, x, y, true);
 				break;
-
+			
 			case TYPE_TOTAL_EULER:
 				displayEuler(this, context, x, y);
 				break;
-
+			
 			case TYPE_TOTAL_SUBSCRIPT:
 				displaySubscript(this, context, x, y);
 				break;
@@ -1328,7 +1331,7 @@ const TotalDerivativeNoVar = class extends Expression {
 			case TYPE_TOTAL_NOVAR_LAGRANGE:
 				displayLagrange(this, context, x, y);
 				break;
-
+			
 			case TYPE_TOTAL_NOVAR_NEWTON:
 				displayNewton(this, context, x, y);
 				break;
@@ -1369,7 +1372,7 @@ const PartialDerivative = class extends Expression {
 			case TYPE_PARTIAL_LEIBNIZ_QUOTIENT:
 				displayLeibnizQuotient(this, context, x, y, false);
 				break;
-
+			
 			case TYPE_PARTIAL_LEIBNIZ_OPERATOR:
 				displayLeibnizOperator(this, context, x, y, false);
 				break;
@@ -1400,20 +1403,20 @@ const EvaluationBar = class extends Expression {
 	getName()              { return CalculusPackage.messages.nameEvaluationBar; }
 	canHaveChildren(count) { return count === 3; }
 	getChildName(index)    { return CalculusPackage.messages.childrenEvaluationBar[index]; }
-
+	
 	prepareDisplay(context) {
 		const fontSize  = context.fontInfo.size;
 		const barGap    = Math.round(fontSize * EVAL_GAP_FRAC);
 		const serifLen  = Math.round(fontSize * EVAL_SERIF_FRAC);
 		const barStroke = Math.max(1, Math.round(fontSize * 0.06));
 		const isBracket = CalculusPackage.styleEvaluationBar === TYPE_EVAL_BRACKET;
-
+		
 		let ch0 = this.children[0]; // expression
 		let ch1 = this.children[1]; // lower bound
 		let ch2 = this.children[2]; // upper bound
-
+		
 		ch0.prepareDisplay(context);
-
+		
 		{
 			let bkp = context.fontInfo.size;
 			context.fontInfo.setSizeRelative(context, LIMIT_SIZE);
@@ -1421,45 +1424,45 @@ const EvaluationBar = class extends Expression {
 			ch2.prepareDisplay(context);
 			context.fontInfo.setSizeAbsolute(context, bkp);
 		}
-
+		
 		// Bracket: room for left [ before the expression; bar: no left padding
 		const leftPad = isBracket ? serifLen + barGap : 0;
 		ch0.x = leftPad;
 		ch0.y = ch2.height;
-
+		
 		// Right stroke x: for bracket the stroke is serifLen past the serif start
 		const rightStrokeX = ch0.x + ch0.width + barGap + (isBracket ? serifLen : 0);
 		const boundsX      = rightStrokeX + 2;
-
+		
 		ch1.x = boundsX;
 		ch1.y = ch0.y + ch0.height;
-
+		
 		ch2.x = boundsX;
 		ch2.y = 0;
-
+		
 		this.ebBarStroke    = barStroke;
 		this.ebSerifLen     = serifLen;
 		this.ebIsBracket    = isBracket;
 		this.ebBarTop       = ch0.y;
 		this.ebBarBot       = ch0.y + ch0.height;
 		this.ebRightStrokeX = rightStrokeX;
-
+		
 		this.horzBaseline = ch0.y + ch0.horzBaseline;
 		this.width        = boundsX + Math.max(ch1.width, ch2.width);
 		this.height       = ch2.height + ch0.height + ch1.height;
 		this.vertBaseline = Math.round(this.width / 2);
 	}
-
+	
 	display(context, x, y) {
 		let ch0 = this.children[0];
 		ch0.display(context, x + ch0.x, y + ch0.y);
-
+		
 		const barTop = y + this.ebBarTop;
 		const barBot = y + this.ebBarBot;
-
+		
 		context.save();
 		context.lineWidth = this.ebBarStroke;
-
+		
 		if (this.ebIsBracket) {
 			// Left bracket [: stroke at x, serifs extend right
 			context.beginPath();
@@ -1468,7 +1471,7 @@ const EvaluationBar = class extends Expression {
 			context.lineTo(x,                   barBot);
 			context.lineTo(x + this.ebSerifLen, barBot);
 			context.stroke();
-
+			
 			// Right bracket ]: stroke at rx, serifs extend left
 			const rx = x + this.ebRightStrokeX;
 			context.beginPath();
@@ -1477,7 +1480,8 @@ const EvaluationBar = class extends Expression {
 			context.lineTo(rx,                   barBot);
 			context.lineTo(rx - this.ebSerifLen, barBot);
 			context.stroke();
-		} else {
+		}
+		else {
 			// Vertical bar |
 			const bx = x + this.ebRightStrokeX;
 			context.beginPath();
@@ -1485,21 +1489,21 @@ const EvaluationBar = class extends Expression {
 			context.lineTo(bx, barBot);
 			context.stroke();
 		}
-
+		
 		context.restore();
-
+		
 		let bkp = context.fontInfo.size;
 		context.fontInfo.setSizeRelative(context, LIMIT_SIZE);
-
+		
 		let ch1 = this.children[1];
 		ch1.display(context, x + ch1.x, y + ch1.y);
-
+		
 		let ch2 = this.children[2];
 		ch2.display(context, x + ch2.x, y + ch2.y);
-
+		
 		context.fontInfo.setSizeAbsolute(context, bkp);
 	}
-
+	
 	moveTo(direction) {
 		switch (direction) {
 			case Expression.UP:       return this.children[2].moveTo(direction);
@@ -1508,7 +1512,7 @@ const EvaluationBar = class extends Expression {
 			default:                  return this.children[0].moveTo(direction);
 		}
 	}
-
+	
 	moveAcross(i, direction) {
 		switch (direction) {
 			case Expression.NEXT:
@@ -1540,7 +1544,7 @@ CalculusPackage.setExpressions = function(module) {
 	Formulae.setExpression(module, "Calculus.Differential.TotalDerivative",                 TotalDerivative);
 	Formulae.setExpression(module, "Calculus.Differential.TotalDerivativeWithoutVariables", TotalDerivativeNoVar);
 	Formulae.setExpression(module, "Calculus.Differential.PartialDerivative",               PartialDerivative);
-
+	
 	Formulae.setExpression(module, "Calculus.EvaluationBar", EvaluationBar);
 };
 
@@ -1635,29 +1639,29 @@ CalculusPackage.onConfiguration = () => {
 	////////////////////////////////////////////////////////////
 	
 	////////////////////////////////////////////////////////////
-
+	
 	row = table.insertRow();
 	th = document.createElement("th");
 	th.appendChild(document.createTextNode(CalculusPackage.messages.preferenceEvaluationBarTitle));
 	row.appendChild(th);
-
+	
 	row = table.insertRow();
 	col = row.insertCell();
-
+	
 	radio = document.createElement("input"); radio.type = "radio"; radio.name = "evalbar"; radio.value = TYPE_EVAL_BAR;
 	radio.checked = (radio.value == CalculusPackage.styleEvaluationBar);
 	col.appendChild(radio);
 	col.appendChild(document.createTextNode(CalculusPackage.messages.preferenceEvaluationBarBar));
-
+	
 	col.appendChild(document.createElement("br"));
-
+	
 	radio = document.createElement("input"); radio.type = "radio"; radio.name = "evalbar"; radio.value = TYPE_EVAL_BRACKET;
 	radio.checked = (radio.value == CalculusPackage.styleEvaluationBar);
 	col.appendChild(radio);
 	col.appendChild(document.createTextNode(CalculusPackage.messages.preferenceEvaluationBarBracket));
-
+	
 	////////////////////////////////////////////////////////////
-
+	
 	row = table.insertRow();
 	th = document.createElement("th");
 	const button = document.createElement("button");
@@ -1680,10 +1684,10 @@ CalculusPackage.onChangeStyle = function() {
 	
 	let partial = document.querySelector('input[name="partial"]:checked');
 	if (partial) CalculusPackage.stylePartial = parseInt(partial.value);
-
+	
 	let evalbar = document.querySelector('input[name="evalbar"]:checked');
 	if (evalbar) CalculusPackage.styleEvaluationBar = parseInt(evalbar.value);
-
+	
 	Formulae.resetModal();
 	Formulae.refreshHandlers();
 };
