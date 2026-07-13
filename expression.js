@@ -1690,5 +1690,6 @@ CalculusPackage.onChangeStyle = function() {
 	
 	Formulae.resetModal();
 	Formulae.refreshHandlers();
+	Formulae.loadReloadEditions(); // rebuild the edition panel so the style-dependent derivative / evaluation-bar icons reflect the new notation
 };
 

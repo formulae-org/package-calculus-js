@@ -178,44 +178,51 @@ CalculusPackage.actionEditDerivativeNoVar = function() {
 };
 
 CalculusPackage.setEditions = function() {
+	// Integrals
 	Formulae.addEdition(
-		this.messages.pathIntegral, null, this.messages.leafIndefiniteIntegral,
+		this.messages.pathIntegral, Formulae.icon("Calculus.Integral.IndefiniteIntegral", 2), this.messages.leafIndefiniteIntegral,
 		() => Expression.multipleEdition("Calculus.Integral.IndefiniteIntegral", 2, 0)
 	);
 	Formulae.addEdition(
-		this.messages.pathIntegral, null, this.messages.leafDefiniteIntegral,
+		this.messages.pathIntegral, Formulae.icon("Calculus.Integral.DefiniteIntegral", 4), this.messages.leafDefiniteIntegral,
 		() => Expression.multipleEdition("Calculus.Integral.DefiniteIntegral", 4, 0)
 	);
 	Formulae.addEdition(
-		this.messages.pathIntegral, null, this.messages.leafDefiniteIntegralOverDomain,
+		this.messages.pathIntegral, Formulae.icon("Calculus.Integral.DefiniteIntegralOverDomain", 3, ' Dimensions="2" ClosedDomain="False"'), this.messages.leafDefiniteIntegralOverDomain,
 		() => CalculusPackage.editionCreateDefiniteIntegralOverDomain()
 	);
+
+	// Limits
 	Formulae.addEdition(
-		this.messages.pathLimit, null, this.messages.leafLimit,
+		this.messages.pathLimit, Formulae.icon("Calculus.Limit.Limit", 3), this.messages.leafLimit,
 		() => Expression.multipleEdition("Calculus.Limit.Limit", 3, 0)
 	);
 	Formulae.addEdition(
-		this.messages.pathLimit, null, this.messages.leafLimitInferior,
+		this.messages.pathLimit, Formulae.icon("Calculus.Limit.LimitInferior", 3), this.messages.leafLimitInferior,
 		() => Expression.multipleEdition("Calculus.Limit.LimitInferior", 3, 0)
 	);
 	Formulae.addEdition(
-		this.messages.pathLimit, null, this.messages.leafLimitSuperior,
+		this.messages.pathLimit, Formulae.icon("Calculus.Limit.LimitSuperior", 3), this.messages.leafLimitSuperior,
 		() => Expression.multipleEdition("Calculus.Limit.LimitSuperior", 3, 0)
 	);
+
+	// Differential
 	Formulae.addEdition(
-		this.messages.pathDifferential, null, this.messages.leafTotalDerivative,
+		this.messages.pathDifferential, Formulae.icon("Calculus.Differential.TotalDerivative", 2), this.messages.leafTotalDerivative,
 		() => Expression.multipleEdition("Calculus.Differential.TotalDerivative", 2, 0)
 	);
 	Formulae.addEdition(
-		this.messages.pathDifferential, null, this.messages.leafTotalDerivativeNoVar,
+		this.messages.pathDifferential, Formulae.icon("Calculus.Differential.TotalDerivativeWithoutVariables", 1, ' Order="1"'), this.messages.leafTotalDerivativeNoVar,
 		() => CalculusPackage.editionCreateTotalDerivativeNoVar()
 	);
 	Formulae.addEdition(
-		this.messages.pathDifferential, null, this.messages.leafPartialDerivative,
+		this.messages.pathDifferential, Formulae.icon("Calculus.Differential.PartialDerivative", 2), this.messages.leafPartialDerivative,
 		() => Expression.multipleEdition("Calculus.Differential.PartialDerivative", 2, 0)
 	);
+
+	// Evaluation bar
 	Formulae.addEdition(
-		this.messages.pathCalculus, null, this.messages.leafEvaluationBar,
+		this.messages.pathCalculus, Formulae.icon("Calculus.EvaluationBar", 3), this.messages.leafEvaluationBar,
 		() => Expression.multipleEdition("Calculus.EvaluationBar", 3, 0)
 	);
 };
